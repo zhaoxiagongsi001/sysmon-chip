@@ -54,10 +54,10 @@ pub fn layout(items: &crate::items::Items) -> Layout {
 
 /// 网速列内部排布：数字右缘贴列右缘，箭头紧贴数字左侧。
 ///
-/// 返回 `(数字左缘 x, 箭头左缘 x)`。箭头会被夹在列左缘 `min_x` 处，
-/// 即使数字宽度超出预算也不会压到左边的磁盘列。
+/// 返回 `(数字左缘 x, 箭头左缘 x)`。两者都被夹在列左缘 `min_x` 处：
+/// 读数偶尔超宽时（极端速率）宁可让绘制矩形把右端裁掉，也不压进左边的磁盘列。
 pub fn net_group_x(right: i32, text_w: i32, arrow_w: i32, gap: i32, min_x: i32) -> (i32, i32) {
-    let text_x = right - text_w.max(0);
+    let text_x = (right - text_w.max(0)).max(min_x);
     let arrow_x = (text_x - gap - arrow_w).max(min_x);
     (text_x, arrow_x)
 }
@@ -169,7 +169,8 @@ impl WText {
     }
 
     /// 字节/秒 -> "512 B/s" / "2.9 KB/s" / "1.2 MB/s" / "1.4 GB/s"（整数运算，无浮点格式化）。
-    /// 数值 >=100 时去掉小数位，保证网速列宽度有上界、不撞左侧箭头。
+    /// 数值达到 100 个显示单位时去掉小数位（MB 档 >=100 去小数，GB 档 >=100 GB 去小数），
+    /// 保证网速列宽度有上界、不撞左侧箭头。
     pub fn set_rate(&mut self, bps: u64) {
         self.clear();
         if bps >= 1_073_741_824 {
@@ -221,8 +222,16 @@ impl WText {
             self.tail(b" MB/s");
         } else if bps >= 1024 {
             let kb = (bps + 512) / 1024;
-            self.push_num(kb);
-            self.tail(b" KB/s");
+            // 1000–1023 KB/s 是四位数，225% 下量得 156 px，压不进 150 px 的预算；
+            // 进位成整 MB（1023 KB/s -> "1 MB/s"），否则会顶掉箭头的位置。
+            if kb >= 1000 {
+                let mb = ((bps + 524_288) / 1_048_576).max(1);
+                self.push_num(mb);
+                self.tail(b" MB/s");
+            } else {
+                self.push_num(kb);
+                self.tail(b" KB/s");
+            }
         } else {
             self.push_num(bps);
             self.tail(b" B/s");
@@ -706,18 +715,33 @@ mod v10_net {
         }
     }
 
-    /// 数字右对齐、箭头贴数字左侧，并夹在列左缘之内。
+    /// 数字右对齐、箭头贴数字左侧，两者都夹在列左缘之内（v1.1 起数字也夹）。
     #[test]
     fn net_group_x_keeps_arrow_inside_column() {
         // 列 [0,173)、数字 148 宽、箭头 18、间隙 5
         assert_eq!(net_group_x(173, 148, 18, 5, 0), (25, 2));
-        // 数字过宽时箭头被夹到列左缘，不会压进左边的磁盘列
-        let (text_x, arrow_x) = net_group_x(173, 250, 18, 5, 0);
-        assert_eq!(text_x, -77);
-        assert_eq!(arrow_x, 0);
+        // 数字过宽（250 > 173）时数字被夹到列左缘，箭头也停在列左缘，
+        // 谁都不许压进左边的磁盘列
+        assert_eq!(net_group_x(173, 250, 18, 5, 0), (0, 0));
         // 空文本不应把箭头推到列外
         let (_, arrow_x) = net_group_x(173, 0, 18, 5, 0);
         assert_eq!(arrow_x, 173 - 5 - 18);
+    }
+
+    /// v1.1：1000–1023 KB/s 的紧凑格式必须进位到 MB，否则四位数撑出预算。
+    #[test]
+    fn compact_kilobytes_above_1000_roll_over_to_mb() {
+        let mut t = WText::new();
+        t.set_rate_compact(1023 * 1024); // 1_047_552 B/s
+        assert_eq!(s(&t), "1 MB/s");
+        t.set_rate_compact(1000 * 1024);
+        assert_eq!(s(&t), "1 MB/s");
+        // 999 KB 仍是三位数，保留 KB
+        t.set_rate_compact(999 * 1024);
+        assert_eq!(s(&t), "999 KB/s");
+        // 常规格式本来就是四位数，靠 on_timer 触发紧凑化兜底
+        t.set_rate(1023 * 1024);
+        assert_eq!(s(&t), "1023 KB/s");
     }
 
     /// 列宽预算：225% 下 value 字体最宽的紧凑读数（"999 MB/s" 148 px）加上

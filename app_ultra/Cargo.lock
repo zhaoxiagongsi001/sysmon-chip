@@ -4,14 +4,14 @@ version = 4
 
 [[package]]
 name = "chip-core"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "windows-sys",
 ]
 
 [[package]]
 name = "sysmon-chip-lite"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "chip-core",
  "windows-sys",

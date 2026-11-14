@@ -5,7 +5,7 @@ use core::ptr;
 use windows_sys::Win32::Foundation::{CloseHandle, GetLastError, HANDLE, ERROR_ALREADY_EXISTS};
 use windows_sys::Win32::Storage::FileSystem::{
     CreateDirectoryW, CreateFileW, DeleteFileW, GetTempPathW, MoveFileExW, ReadFile, WriteFile,
-    MOVEFILE_REPLACE_EXISTING,
+    MOVEFILE_REPLACE_EXISTING, MOVEFILE_WRITE_THROUGH,
 };
 use windows_sys::Win32::System::Environment::GetEnvironmentVariableW;
 use windows_sys::Win32::System::LibraryLoader::GetModuleFileNameW;
@@ -150,7 +150,9 @@ impl Config {
         }
     }
 
-    pub fn save(&self) {
+    /// 写配置到 `%APPDATA%\SysMonChip\config.ini`。
+    /// 返回 false 表示没写进去（文件被占用等），调用方应安排重试。
+    pub fn save(&self) -> bool {
         let mut buf = [0u8; 640];
         let mut n = 0usize;
         push(&mut buf, &mut n, b"; SysMonChip config\n");
@@ -192,7 +194,7 @@ impl Config {
         push(&mut buf, &mut n, b"\n");
         unsafe {
             create_config_dir();
-            write_config(&buf[..n]);
+            write_config(&buf[..n])
         }
     }
 }
@@ -374,12 +376,12 @@ unsafe fn read_config(buf: &mut [u8]) -> usize {
     }
 }
 
-unsafe fn write_config(data: &[u8]) {
+unsafe fn write_config(data: &[u8]) -> bool {
     let mut path = [0u16; 320];
     if config_path(&mut path).is_none() {
-        return;
+        return false;
     }
-    write_file(&path, data);
+    write_file(&path, data)
 }
 
 unsafe fn write_file(path: &[u16], data: &[u8]) -> bool {
@@ -418,16 +420,51 @@ unsafe fn write_file(path: &[u16], data: &[u8]) -> bool {
         &mut written,
         ptr::null_mut(),
     );
-    CloseHandle(h);
-    if ok == 0 || written as usize != data.len() {
+    // 关闭失败意味着数据未必落盘，按失败处理
+    let closed = CloseHandle(h);
+    if ok == 0 || closed == 0 || written as usize != data.len() {
         DeleteFileW(tmp.as_ptr());
         return false;
     }
-    if MoveFileExW(tmp.as_ptr(), path.as_ptr(), MOVEFILE_REPLACE_EXISTING) == 0 {
-        DeleteFileW(tmp.as_ptr());
+    // MOVEFILE_WRITE_THROUGH：让改名本身也落盘，否则断电后可能既没有临时文件也没有新文件
+    if MoveFileExW(
+        tmp.as_ptr(),
+        path.as_ptr(),
+        MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH,
+    ) != 0
+    {
+        return true;
+    }
+    // 改名被拒不等于数据丢了：杀软/索引器短暂占用目标文件是常见原因，
+    // 这时退回直接覆盖写（牺牲原子性，换取这次设置不白改）
+    let _ = DeleteFileW(tmp.as_ptr());
+    write_direct(path, data)
+}
+
+/// 兜底写盘：直接覆盖目标文件，不做临时文件 + 改名。
+unsafe fn write_direct(path: &[u16], data: &[u8]) -> bool {
+    let h = CreateFileW(
+        path.as_ptr(),
+        GENERIC_WRITE,
+        0,
+        ptr::null(),
+        CREATE_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL,
+        ptr::null_mut(),
+    );
+    if h as isize == -1 {
         return false;
     }
-    true
+    let mut written: u32 = 0;
+    let ok = WriteFile(
+        h,
+        data.as_ptr(),
+        data.len() as u32,
+        &mut written,
+        ptr::null_mut(),
+    );
+    let closed = CloseHandle(h);
+    ok != 0 && closed != 0 && written as usize == data.len()
 }
 
 // ---------------------------------------------------------------- 注册表

@@ -103,11 +103,18 @@ def check_layout(h):
     def width():
         return size(h)[0]
 
+    screen_w = u32.GetSystemMetrics(SM_CXSCREEN)
+    was_desktop = box(h)[2] == screen_w
     cmd(h, CMD_TASKBAR)
     w_all = width()
     left_all = box(h)[0]
     if not toggle_off(h, CMD_NET):
         fails.append("起始状态里「网速」本来就是关的（配置不是四项全开），本次布局检查未生效")
+        # toggle_off 已经把「网速」打开了，撤销这次切换，并把模式还原，
+        # 否则后面的检查会拿错误的面板状态当基准
+        cmd(h, CMD_NET)
+        if was_desktop:
+            cmd(h, CMD_DESKTOP)
         return fails
     w_net_off = width()
     cmd(h, CMD_DISK)
@@ -168,7 +175,7 @@ def check_padding(h):
     """: 左右留白基本对称（v0.9.1 把右侧多余的 24 px 吃了回去）。
 
     切模式/重排之后立刻抓屏会抓到半帧（右侧凭空多出 10px 空白），
-    因此先等一个刷新周期，若不对称再复测一次，两次都不对称才判失败。
+    因此先等一个刷新周期再量；仍不对称就复测，最多三次都不对称才判失败。
     """
     got = None
     for _ in range(3):

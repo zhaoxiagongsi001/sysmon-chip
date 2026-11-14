@@ -235,6 +235,8 @@ pub struct App {
     /// 网速两行文字在当前 DPI 下的实测宽度（px）：每 tick 算一次，render 不再每帧量
     up_w: i32,
     dn_w: i32,
+    /// 上一次写配置失败（文件被占用等）：下一个 tick 自动重试，直到写成功
+    save_pending: bool,
     trace: bool,
     demo: bool,
     t0: i64,
@@ -274,6 +276,7 @@ impl App {
             raises: 0,
             up_w: 0,
             dn_w: 0,
+            save_pending: false,
             trace,
             demo,
             t0,
@@ -455,14 +458,20 @@ impl App {
             (1, &self.texts.mem_lab, &self.texts.mem_val, self.pal.level(m.mem)),
             (2, &self.texts.disk_lab, &self.texts.disk_val, self.pal.level(m.disk)),
         ];
+        // 最后一列（网速关掉时就是磁盘）的数值右对齐到列右缘：
+        // 否则右侧留白会随数字宽度变化，和左边 8px 的固定内边距对不上。
+        let last_on = (0..4).rev().find(|&i| lay.on[i]).unwrap_or(0);
         for (i, lab, val, color) in cells {
             if !lay.on[i] {
                 continue;
             }
             let px = scale(lay.x[i], dpi);
             let pw = scale(ITEM_W[i] - 2, dpi);
+            let last = i == last_on;
             draw_text(dst, lab, px, 0, pw, row_h, false, self.pal.label, f.label);
-            draw_text(dst, val, px, row_h, pw, self.h - row_h, false, color, f.value);
+            // 末列的数值用整格宽度右对齐，右缘正好落在 面板宽 − PAD_R
+            let vw = if last { scale(ITEM_W[i], dpi) } else { pw };
+            draw_text(dst, val, px, row_h, vw, self.h - row_h, last, color, f.value);
         }
         if lay.on[3] {
             let nx = scale(lay.x[3], dpi);
@@ -489,9 +498,14 @@ impl App {
             let upw = right - up_x;
             let dnw = right - dn_x;
             draw_text(dst, &self.texts.up_speed, up_x, 0, upw, row_h, false, self.pal.label, f.label);
-            draw_text(dst, &self.texts.up_arrow, up_ax, 0, aw, row_h, false, self.pal.up, f.label);
             draw_text(dst, &self.texts.down_speed, dn_x, row_h, dnw, self.h - row_h, false, self.pal.label, f.value);
-            draw_text(dst, &self.texts.down_arrow, dn_ax, row_h, aw, self.h - row_h, false, self.pal.down, f.value);
+            // 两者都被夹在列左缘：极端宽读数下箭头会与数字重叠，这时宁可不画箭头
+            if up_ax + aw <= up_x {
+                draw_text(dst, &self.texts.up_arrow, up_ax, 0, aw, row_h, false, self.pal.up, f.label);
+            }
+            if dn_ax + aw <= dn_x {
+                draw_text(dst, &self.texts.down_arrow, dn_ax, row_h, aw, self.h - row_h, false, self.pal.down, f.value);
+            }
         }
     }
 
@@ -512,9 +526,20 @@ impl App {
 
     // ------------------------------------------------------------ 定时
 
+    /// 写配置：失败（文件被占用等）就记下来，下一个 tick 自动重试，不打断用户操作。
+    unsafe fn persist(&mut self) {
+        if !self.cfg.save() {
+            self.save_pending = true;
+        }
+    }
+
     unsafe fn on_timer(&mut self) {
         self.tick = self.tick.wrapping_add(1);
         self.raises = 0;
+        // 上一次写配置没成功：每秒重试一次，直到写进去为止
+        if self.save_pending && self.cfg.save() {
+            self.save_pending = false;
+        }
         // 菜单/拖动时不抢 z 序；其余每秒自查一次是否被任务栏压住（真的被压才提层）
         if !self.in_menu && !self.dragging && self.covered_by_taskbar() {
             self.raise_above_taskbar();
@@ -666,7 +691,7 @@ impl App {
         self.cfg.mode = PosMode::Free;
         self.cfg.x = r.left;
         self.cfg.y = r.top;
-        self.cfg.save();
+        self.persist();
     }
 
     // ------------------------------------------------------------ 菜单
@@ -790,7 +815,7 @@ impl App {
             _ => {}
         }
         self.relayout();
-        self.cfg.save();
+        self.persist();
         let mut t = self.texts;
         t.apply(&self.metrics, &self.cfg.items);
         self.texts = t;
@@ -1210,6 +1235,7 @@ unsafe fn create_window(app_ptr: *mut App) -> HWND {
     let dpi = GetDpiForSystem();
     let h = scale(BASE_H, if dpi == 0 { 96 } else { dpi });
     // v1.0：初始宽度跟菜单里实际生效的指标走（原来是固定 BASE_W，启动瞬间会多出 24 逻辑 px）
+    // SAFETY: 调用方 `run()` 传的是 `&mut app` 的地址，App 在消息循环期间一直存活。
     let w = scale((*app_ptr).w, if dpi == 0 { 96 } else { dpi });
     CreateWindowExW(
         WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,

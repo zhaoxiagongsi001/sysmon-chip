@@ -3,7 +3,7 @@
 - **评审工具**：alibaba/open-code-review v1.13.9（`ocr delegate preview` + `ocr delegate rule`，委派模式：OCR 只做确定性选文件与规则解析，评审由本会话模型执行）
 - **评审范围**：`c20265a`（v0.9.1）→ `76822c8`（v1.0 首帧修复），即提交 `3777e4b`、`60b2a97`、`76822c8`
 - **评审时间**：2026-11-14
-- **结论**：**无 Critical / 无 High / 无 Medium**；11 条 Low，均为文档与失败路径的边角，不影响 v1.0 发布。发布后建议在 v1.1 一并清掉。
+- **结论**：**无 Critical / 无 High / 无 Medium**；10 条 Low，均为文档与失败路径的边角，不影响 v1.0 发布。发布后建议在 v1.1 一并清掉。
 
 ## 覆盖率
 
@@ -32,7 +32,7 @@
 | `chip_core/src/paint.rs` | +107−16 | `ITEM_W[3]=77`、`NET_ARROW_W`/`NET_GAP`、`net_group_x`、GB 档与 3 条新单测；公式与边界正确，见 L1、L2、L9 |
 | `tools/verify.py` | +302 | 五项自检替代 32 个一次性脚本，退出码语义正确、采样与判定合理；见 L7、L10 |
 
-## 发现（11 条，全部 Low）
+## 发现（10 条，全部 Low）
 
 ### L1 网速数字超宽时未被夹住，只夹了箭头
 - `path`: `chip_core/src/paint.rs` · `content`: `net_group_x` · `start_line`: 56 · `end_line`: 66 · `category`: 边界与越界 · `severity`: low

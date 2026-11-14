@@ -2,9 +2,9 @@
 
 复刻 MangoDisk「任务栏资源条」外观的 Windows 11 小挂件：两行文字实时显示 **CPU / 内存 / 系统盘 / 上下行网速**，单文件、免安装、不要管理员、不写驱动、不联网。
 
-> **下载**：[SysMonChipLite v1.0](https://github.com/zhaoxiagongsi001/sysmon-chip/releases/latest)　·　源码：<https://github.com/zhaoxiagongsi001/sysmon-chip>　·　MIT
+> **下载**：[SysMonChipLite v1.1](https://github.com/zhaoxiagongsi001/sysmon-chip/releases/latest)　·　源码：<https://github.com/zhaoxiagongsi001/sysmon-chip>　·　MIT
 
-- 发布物（推荐）：`发布/SysMonChipLite.exe`（**48.5 KB**，PE 版本 **1.0.0.0**，no_std 极限轻量版，功能与界面同 std 版逐像素一致）
+- 发布物（推荐）：`发布/SysMonChipLite.exe`（**49 KB**，PE 版本 **1.1.0.0**，no_std 极限轻量版，功能与界面同 std 版逐像素一致）
 - 发布物（std 版，保底）：`发布/SysMonChip.exe`（326.5 KB，v0.3.0.0）；两版共用同一份配置与单实例互斥，可随时互换对照
 - **v2.0 Lite（2026-11-10）**：抽出 no_std 共享核心 `chip_core`，外壳 `app_ultra` 不链接 Rust std（文件/注册表/命令行走 Win32）→ 体积 **327 KB → 56 KB（−83%）**，启动更快，功能/界面/稳定性与 std 版持平
 - **v1.1（2026-11-10）**：字号 +8%（标签 9.75 pt / 数值 10 pt）、面板 194→198 逻辑像素并重排列位、网速宽度自适应、桌面模式贴任务栏上沿+屏幕右缘、新增 `--demo`
@@ -380,3 +380,16 @@ OCR 委派评审（`OCR审核-v0.9.1-20261114.md`）提出的 5 条发现与优�
 - **std 版重新可编译**：`app/src/wnd.rs:175`、`:627` 的 `Fonts::create(self.dpi)` 少了 `as i32`，导致 `cargo build` 在 `app/` 直接失败（v0.4 之后 chip_core 换了签名，此壳一直没人编）。已修。
 - **实测（v1.0，225%，物理像素）**：`python tools/verify.py` 全绿 —— 宽度全开 **491**（=218 逻辑）→ 关网速 317（141）→ 再关磁盘 221（98）；`desktop-right` 右缘锁 3456；左右留白 19 / 21（差 2 px）；`GetWindowRgn` 类型 3、`rgnBox=(0,0)-(491,107)`；托盘隐藏 5.2 ms / 恢复 5.6 ms。`cargo test` **13 项全绿**。体积 48640 → **49664 B（+1024 B）**，PE **1.0.0.0**。
 - **仍未做（下一版）**：亚克力（`app_impl.rs:152` 的 `GetProcAddress` UTF-16 同款错误，且启用前要先清底防鬼影）、`WM_NCHITTEST` 点击穿透、全屏进出即时化（目前 ≤1 s）、电池读数与 tooltip。
+## v1.1 评审修复（2026-11-14，PE 1.1.0.0）
+
+> 这里的 v1.1 是 2026-11-14 这一版（OCR 评修复版）；上方「变更记录」里 2026-11-10 的 v1.1 是旧编号，已被 v0.7–v1.0 取代。
+
+按 `OCR审核-v1.0-20261114.md` 的 10 条 Low 发现逐条修完，另补一处自测暴露的问题。
+
+- **网速列不再压字**：`net_group_x` 的数字与箭头都夹在列左缘；`set_rate_compact` 把 1000–1023 KB/s 进位成 `1 MB/s`（四位数 156 px，塞不进 150 px 预算）。
+- **末列数值右对齐**：网速关掉时最后一列是磁盘，数值右对齐到列右缘，右侧留白恒为 8 px、与左侧内边距对称——此前关掉网速右边会多出 30 px 空白。
+- **配置写盘更稳**：`MoveFileExW` 带 `MOVEFILE_WRITE_THROUGH`、检查 `CloseHandle`、改名失败退回直接覆盖写；`save()` 返回 bool，失败后每秒自动重试一次。
+- **std 壳冻结**：`app/` 停在 0.3.0（与自己 PE 版本一致），与 `chip_core` 的常量彻底解耦。
+- **探针脚本**：`tools/verify.py` 的 `check_layout` 早退前会还原现场，注释与实现一致。
+
+实测（225%）：`cargo test` 14 项全绿；`tools/verify.py layout|padding|region|tray` 全 PASS；宽度全开 491 → 关网速 317 → 再关磁盘 221 物理 px；左右留白 19/18–20 px；托盘隐藏 / 显示 5.4 / 5.3 ms。
