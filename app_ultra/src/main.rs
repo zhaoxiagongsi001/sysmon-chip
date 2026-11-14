@@ -107,9 +107,10 @@ pub extern "system" fn WinMain(_h: HINSTANCE, _p: HINSTANCE, _cmd: *const u8, _s
     }
     if cmdline_has("autostart-on") || cmdline_has("autostart-off") {
         let on = cmdline_has("autostart-on");
-        let ok = config::set_autostart(on);
+        let (ok, rc_open, rc_write) = config::set_autostart_diag(on);
         let registered = config::autostart_registered();
-        let mut buf = [0u8; 160];
+        let matches = config::autostart_points_to_current();
+        let mut buf = [0u8; 240];
         let mut n = 0usize;
         push_str(&mut buf, &mut n, "autostart=");
         push_str(&mut buf, &mut n, if on { "on" } else { "off" });
@@ -117,6 +118,28 @@ pub extern "system" fn WinMain(_h: HINSTANCE, _p: HINSTANCE, _cmd: *const u8, _s
         push_str(&mut buf, &mut n, if ok { "ok" } else { "fail" });
         push_str(&mut buf, &mut n, "\nregistered=");
         push_str(&mut buf, &mut n, if registered { "1" } else { "0" });
+        push_str(&mut buf, &mut n, "\npoints_to_current=");
+        push_str(
+            &mut buf,
+            &mut n,
+            match matches {
+                Some(true) => "yes",
+                Some(false) => "no",
+                None => "unknown",
+            },
+        );
+        push_str(&mut buf, &mut n, "\nrc_open=");
+        push_u64(&mut buf, &mut n, rc_open as u64);
+        push_str(&mut buf, &mut n, "\nrc_write=");
+        push_u64(&mut buf, &mut n, rc_write as u64);
+        let probe = config::probe_run_access();
+        push_str(&mut buf, &mut n, "\nprobe_set/write/all/read=");
+        for (i, rc) in probe.iter().enumerate() {
+            if i > 0 {
+                push_str(&mut buf, &mut n, "/");
+            }
+            push_u64(&mut buf, &mut n, *rc as u64);
+        }
         push_str(&mut buf, &mut n, "\n");
         config::write_temp("sysmonchip-autostart.txt", &buf[..n]);
         return 0;

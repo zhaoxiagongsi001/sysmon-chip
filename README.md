@@ -2,9 +2,9 @@
 
 复刻 MangoDisk「任务栏资源条」外观的 Windows 11 小挂件：两行文字实时显示 **CPU / 内存 / 系统盘 / 上下行网速**，单文件、免安装、不要管理员、不写驱动、不联网。
 
-> **下载**：[SysMonChipLite v1.3](https://github.com/zhaoxiagongsi001/sysmon-chip/releases/tag/v1.3)　·　源码：<https://github.com/zhaoxiagongsi001/sysmon-chip>　·　MIT
+> **下载**：[SysMonChipLite v1.4](https://github.com/zhaoxiagongsi001/sysmon-chip/releases/tag/v1.4)　·　源码：<https://github.com/zhaoxiagongsi001/sysmon-chip>　·　MIT
 
-- 发布物（推荐）：`发布/SysMonChipLite.exe`（**38.5 KB**，PE 版本 **1.3.0.0**，no_std 极限轻量版，功能与界面同 std 版逐像素一致）
+- 发布物（推荐）：`发布/SysMonChipLite.exe`（**40 KB**，PE 版本 **1.4.0.0**，no_std 极限轻量版，功能与界面同 std 版逐像素一致）
 - 发布物（std 版，保底）：`发布/SysMonChip.exe`（326.5 KB，v0.3.0.0）；两版共用同一份配置与单实例互斥，可随时互换对照
 - **v2.0 Lite（2026-11-10）**：抽出 no_std 共享核心 `chip_core`，外壳 `app_ultra` 不链接 Rust std（文件/注册表/命令行走 Win32）→ 体积 **327 KB → 56 KB（−83%）**，启动更快，功能/界面/稳定性与 std 版持平
 - **v1.1（2026-11-10）**：字号 +8%（标签 9.75 pt / 数值 10 pt）、面板 194→198 逻辑像素并重排列位、网速宽度自适应、桌面模式贴任务栏上沿+屏幕右缘、新增 `--demo`
@@ -438,3 +438,47 @@ v1.1 的 OCR 委派评审留了 8 条 Low（V1–V8），本版逐条处理：
 回归：`tools/verify.py layout|padding|region|tray` 全 PASS（宽度 491 / 317 / 221 物理 px、右下角右缘锁 3456、`GetWindowRgn` type=3、托盘隐藏/显示 <6 ms）；`cargo test` 16 项全绿；截图与 v1.2 逐像素无差异。
 
 放弃项：S2（删 `.pdata/.xdata`）产物被 Windows 判为「不是有效的 Win32 应用程序」，省 2.5 KB 不值当；目标已由 39 424 B 达成。
+
+## v1.4 开机自启真实化（2026-11-14，PE 1.4.0.0）
+
+**问题**：右键菜单里「开机自启」能打勾，但重登后并不启动；有时点了毫无反应，也没有任何提示。
+
+**机制**：勾选 = 在 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` 写入字符串值
+`SysMonChip`，内容为 `"<当前 exe 全路径>" --autostart`。登录时由 Explorer 拉起。
+
+**根因（实测）**：写这个键需要进程具备 Medium 完整性级别。旧版在 `RegOpenKeyExW(KEY_SET_VALUE)`
+失败时静默返回，界面照样打勾，于是「勾是假的」：
+
+| 场景 | `RegOpenKeyExW(KEY_SET_VALUE)` | 结果 |
+|---|---|---|
+| 正常双击启动（Medium） | 0 | 写入成功 |
+| agent 沙箱拉起的实例（Low，S-1-16-4096） | 5（ERROR_ACCESS_DENIED） | 静默失败 |
+| 同机计划任务（Medium）里用 `reg add` 写同一个键 | 0 | 成功（证明键本身可写） |
+
+**v1.4 的四处改动**
+
+1. **失败不再静默**：写注册表失败弹「没有权限写入开机自启项，请从桌面正常启动后再试。」
+2. **勾选以注册表为准，且必须是「指向本 exe」**：换过版本后残留的旧路径不会让菜单虚勾
+   （`config::autostart_points_to_current()`，路径比较大小写不敏感）。
+3. **启动自愈**：注册表已登记但指向别的 exe（换版本、挪目录）时，启动即静默改写成本次运行的
+   exe；改写失败就当没开，避免「勾着但登录启动不到」。改写会留痕
+   `%TEMP%\sysmonchip-autostart-heal.txt`。
+4. **写完回读校验**：`RegSetValueExW` 成功不算成功，必须读回确认指向本 exe（关闭时确认值已删）
+   才算成功，菜单勾选直接反映这次校验结果。
+
+**诊断开关**（排障用，不弹窗）：
+
+```
+SysMonChipLite.exe --autostart-on     # 写入并回读校验
+SysMonChipLite.exe --autostart-off    # 删除并回读校验
+```
+
+结果写到 `%TEMP%\sysmonchip-autostart.txt`，含 `result=` / `registered=` / `points_to_current=` /
+`rc_open=` / `rc_write=` / `probe_set/write/all/read=`（四个访问掩码的打开结果，用来区分「没权限」
+与「参数不对」）。
+
+**回归**：`cargo test` 16 passed；`tools/verify.py layout|padding|region|tray` 全 PASS
+（宽度 491/317/221 物理 px、右下角 `rect=(3235,1946,3456,2052)`、圆角 rgn type=3、托盘隐藏 5.2 ms / 显示 5.4 ms）。
+
+**已知**：在被降权的环境（agent 沙箱）里点自启仍会失败，这是 Windows 完整性控制的预期行为；
+版本升级后请从桌面双击一次，让它完成路径自愈。

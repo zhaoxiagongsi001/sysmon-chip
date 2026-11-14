@@ -34,7 +34,7 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     GetWindowLongPtrW, GetWindowRect, IsWindowVisible, KillTimer, LoadCursorW, LoadImageW,
     PostMessageW, PostQuitMessage, RegisterClassExW, RegisterWindowMessageW, SetForegroundWindow,
     SetTimer, SetWindowLongPtrW, SetWindowPos, ShowWindow, TrackPopupMenuEx, TranslateMessage,
-    CREATESTRUCTW, HMENU, MSG, WNDCLASSEXW, MessageBoxW, MB_ICONINFORMATION, MB_OK,
+    CREATESTRUCTW, HMENU, MSG, WNDCLASSEXW, MessageBoxW, MB_ICONINFORMATION, MB_ICONWARNING, MB_OK,
 };
 
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{ReleaseCapture, SetCapture};
@@ -797,6 +797,9 @@ impl App {
     // ------------------------------------------------------------ 菜单
 
     unsafe fn on_menu(&mut self) {
+        // v1.4：勾选状态以注册表为准，而且只有「指向当前 exe」才算真的开着——
+        // 换过版本后残留的旧路径不会让菜单虚勾。用户也可能在注册表里手改过。
+        self.cfg.autostart = config::autostart_points_to_current() == Some(true);
         let menu = CreatePopupMenu();
         let items = CreatePopupMenu();
         append_item(items, 1, "显示 CPU", self.cfg.items.cpu);
@@ -906,6 +909,15 @@ impl App {
                 let on = !self.cfg.autostart;
                 if config::set_autostart(on) {
                     self.cfg.autostart = on;
+                } else {
+                    // v1.4：写注册表失败不再静默（低权限运行、组策略锁定都会走到这里）
+                    // 注意 wide() 上限 63 个 UTF-16 单元，文案要短，否则会被截断
+                    MessageBoxW(
+                        self.hwnd,
+                        wide("没有权限写入开机自启项，请从桌面正常启动后再试。").as_ptr(),
+                        wide("SysMonChip").as_ptr(),
+                        MB_OK | MB_ICONWARNING,
+                    );
                 }
             }
             99 => {
@@ -1395,7 +1407,17 @@ pub fn run(trace: bool, demo: bool, t0: i64) {
         }
 
         let mut cfg = Config::load();
-        cfg.autostart = config::autostart_registered();
+        // v1.4：只有注册表确实指向本次运行的 exe 才算「自启已开」。
+        // 已注册但指向别的 exe（换版本、挪目录）时静默改写，改写失败就当没开，
+        // 避免菜单打勾、登录却启动不到。
+        let registered = config::autostart_registered();
+        let points_here = config::autostart_points_to_current() == Some(true);
+        let healed = registered && !points_here && config::set_autostart(true);
+        if healed {
+            // 留一条痕：用户反馈「自启指向不对」时能确认是不是这里改写过的
+            config::write_temp("sysmonchip-autostart-heal.txt", b"healed=1\n");
+        }
+        cfg.autostart = points_here || healed;
 
         // no_std：App 放栈上（WinMain 帧贯穿整个消息循环），指针经 GWLP_USERDATA 传给窗口过程
         let mut app = App::new(cfg, trace, demo, t0);

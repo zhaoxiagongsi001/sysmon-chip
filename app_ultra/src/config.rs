@@ -563,19 +563,108 @@ pub fn autostart_registered() -> bool {
     unsafe { reg_has_value(RUN_KEY, RUN_NAME) }
 }
 
-pub fn set_autostart(on: bool) -> bool {
+/// v1.4：Run 里登记的命令是否指向当前 exe（大小写不敏感）。
+/// `None` = 未注册或读不到；`Some(true)` = 一致；`Some(false)` = 指向别的路径（换版本后的陈旧项）。
+pub fn autostart_points_to_current() -> Option<bool> {
     unsafe {
         let sub = wide(RUN_KEY);
         let name = wide(RUN_NAME);
         let mut hkey: HKEY = ptr::null_mut();
-        if RegOpenKeyExW(HKEY_CURRENT_USER, sub.as_ptr(), 0, KEY_SET_VALUE, &mut hkey) != 0 {
+        if RegOpenKeyExW(HKEY_CURRENT_USER, sub.as_ptr(), 0, KEY_READ, &mut hkey) != 0 {
+            return None;
+        }
+        let mut ty: u32 = 0;
+        let mut buf = [0u16; 512];
+        let mut cb: u32 = (buf.len() * 2) as u32;
+        let rc = RegQueryValueExW(
+            hkey,
+            name.as_ptr(),
+            ptr::null(),
+            &mut ty,
+            buf.as_mut_ptr() as *mut u8,
+            &mut cb,
+        );
+        RegCloseKey(hkey);
+        if rc != 0 || ty != REG_SZ {
+            return None;
+        }
+        let mut exe = [0u16; 320];
+        let n = GetModuleFileNameW(ptr::null_mut(), exe.as_mut_ptr(), exe.len() as u32);
+        if n == 0 {
+            return None;
+        }
+        Some(prefix_matches_ci(&buf, &exe[..n as usize]))
+    }
+}
+
+/// 注册表命令行是否以 `"<exe>"` 开头（路径大小写不敏感）
+fn prefix_matches_ci(value: &[u16], exe: &[u16]) -> bool {
+    if exe.is_empty() || value.len() < exe.len() + 2 {
+        return false;
+    }
+    if value[0] != b'"' as u16 {
+        return false;
+    }
+    for i in 0..exe.len() {
+        if ascii_lower(value[i + 1]) != ascii_lower(exe[i]) {
             return false;
         }
-        let ok = if on {
+    }
+    value[exe.len() + 1] == b'"' as u16
+}
+
+fn ascii_lower(c: u16) -> u16 {
+    if (b'A' as u16..=b'Z' as u16).contains(&c) {
+        c + 32
+    } else {
+        c
+    }
+}
+
+/// v1.4：探测 Run 键在不同访问掩码下的打开结果（0 = 可以打开）。
+/// 用来区分「没权限」与「调用参数不对」——自启写盘失败时一并写进诊断文件。
+/// 掩码顺序：KEY_SET_VALUE / KEY_WRITE / KEY_ALL_ACCESS / KEY_READ
+pub fn probe_run_access() -> [u32; 4] {
+    const KEY_WRITE: u32 = 0x20006;
+    const KEY_ALL_ACCESS: u32 = 0xF003F;
+    let mut out = [0u32; 4];
+    for (i, sam) in [KEY_SET_VALUE, KEY_WRITE, KEY_ALL_ACCESS, KEY_READ]
+        .iter()
+        .enumerate()
+    {
+        unsafe {
+            let sub = wide(RUN_KEY);
+            let mut hkey: HKEY = ptr::null_mut();
+            let rc = RegOpenKeyExW(HKEY_CURRENT_USER, sub.as_ptr(), 0, *sam, &mut hkey);
+            if rc == 0 {
+                RegCloseKey(hkey);
+            }
+            out[i] = rc;
+        }
+    }
+    out
+}
+
+pub fn set_autostart(on: bool) -> bool {
+    set_autostart_diag(on).0
+}
+
+/// v1.4：返回 (成功, 打开键的错误码, 写/删值的错误码)，0 表示该阶段没错。
+/// 出错码会写进 `%TEMP%\sysmonchip-autostart.txt`，便于用户反馈时定位是权限问题还是路径问题。
+pub fn set_autostart_diag(on: bool) -> (bool, u32, u32) {
+    unsafe {
+        let sub = wide(RUN_KEY);
+        let name = wide(RUN_NAME);
+        let mut hkey: HKEY = ptr::null_mut();
+        let rc_open = RegOpenKeyExW(HKEY_CURRENT_USER, sub.as_ptr(), 0, KEY_SET_VALUE, &mut hkey);
+        if rc_open != 0 {
+            return (false, rc_open, 0);
+        }
+        let (ok, rc_write) = if on {
             let mut exe = [0u16; 320];
             let n = GetModuleFileNameW(ptr::null_mut(), exe.as_mut_ptr(), exe.len() as u32);
             if n == 0 || n as usize >= exe.len() {
-                false
+                (false, 0)
             } else {
                 let mut cmd = [0u16; 700];
                 let mut pos = 0usize;
@@ -589,20 +678,31 @@ pub fn set_autostart(on: bool) -> bool {
                     cmd[pos] = *b as u16;
                     pos += 1;
                 }
-                RegSetValueExW(
+                let rc = RegSetValueExW(
                     hkey,
                     name.as_ptr(),
                     0,
                     REG_SZ,
                     cmd.as_ptr() as *const u8,
                     (pos * 2) as u32,
-                ) == 0
+                );
+                (rc == 0, rc)
             }
         } else {
-            RegDeleteValueW(hkey, name.as_ptr()) == 0
+            let rc = RegDeleteValueW(hkey, name.as_ptr());
+            // 值本来就不在（ERROR_FILE_NOT_FOUND = 2）也算关成功
+            (rc == 0 || rc == 2, rc)
         };
         RegCloseKey(hkey);
-        ok
+        // v1.4：写完回读校验。只有注册表里确实指向本次运行的 exe（或确实已删除），才算成功，
+        // 这样菜单里的勾永远等于「下次登录真的会启动这个 exe」，而不是「调用没报错」。
+        let ok = ok
+            && if on {
+                autostart_points_to_current() == Some(true)
+            } else {
+                !autostart_registered()
+            };
+        (ok, 0, rc_write)
     }
 }
 
