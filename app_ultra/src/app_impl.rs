@@ -472,8 +472,20 @@ impl App {
             // 数字，右侧留白恒等于左侧 PAD_L（不再随数值长短浮动）。
             // 宽度是 on_timer 量好的；这里再用 net_group_x 夹一次，保证箭头不越界。
             let right = nx + scale(ITEM_W[3], dpi);
-            let (up_x, up_ax) = net_group_x(right, self.up_w, aw, gap, nx);
-            let (dn_x, dn_ax) = net_group_x(right, self.dn_w, aw, gap, nx);
+            // 首帧（run() 里第一次 paint_now）还没跑过 on_timer，缓存宽度是 0；
+            // 此时现场量一次，否则速度文字会以 0 宽画不出来，只剩箭头。
+            let up_w = if self.up_w > 0 {
+                self.up_w
+            } else {
+                measure_text(dst, f.label, &self.texts.up_speed)
+            };
+            let dn_w = if self.dn_w > 0 {
+                self.dn_w
+            } else {
+                measure_text(dst, f.value, &self.texts.down_speed)
+            };
+            let (up_x, up_ax) = net_group_x(right, up_w, aw, gap, nx);
+            let (dn_x, dn_ax) = net_group_x(right, dn_w, aw, gap, nx);
             let upw = right - up_x;
             let dnw = right - dn_x;
             draw_text(dst, &self.texts.up_speed, up_x, 0, upw, row_h, false, self.pal.label, f.label);
