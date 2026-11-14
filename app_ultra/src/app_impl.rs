@@ -29,11 +29,11 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     AppendMenuW, CreatePopupMenu, CreateWindowExW, DefWindowProcW, DestroyMenu, DestroyWindow,
     SetWindowTextW,
     DispatchMessageW, FindWindowExW, FindWindowW, GetClassNameW, GetCursorPos, GetForegroundWindow,
-    GetMessageW, GetWindow, MessageBoxW, MB_ICONINFORMATION, MB_OK,
+    GetMessageW, GetWindow,
     GetWindowLongPtrW, GetWindowRect, IsWindowVisible, KillTimer, LoadCursorW, LoadImageW,
     PostMessageW, PostQuitMessage, RegisterClassExW, RegisterWindowMessageW, SetForegroundWindow,
     SetTimer, SetWindowLongPtrW, SetWindowPos, ShowWindow, TrackPopupMenuEx, TranslateMessage,
-    CREATESTRUCTW, HMENU, MSG, WNDCLASSEXW,
+    CREATESTRUCTW, HMENU, MSG, WNDCLASSEXW, MessageBoxW, MB_ICONINFORMATION, MB_OK,
 };
 
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{ReleaseCapture, SetCapture};
@@ -64,6 +64,8 @@ const WM_APP: u32 = 0x8000;
 const WM_QUIT_APP: u32 = WM_APP + 2;
 /// WinEvent 钩子收到 z 序/前台变化后投给自己的消息
 const WM_Z_EVENT: u32 = WM_APP + 3;
+/// 另一个实例（启动器二次启动）要求把资源条唤出来
+const WM_SHOW_CHIP: u32 = WM_APP + 4;
 
 /// 防御性 z 序守护定时器：只在「检测到被任务栏压住 / 任务栏刚拿到前台」后跑一小段
 const TIMER_GUARD: usize = 2;
@@ -1059,6 +1061,17 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) 
                 app.on_z_event(wp as u32);
                 return 0;
             }
+            if msg == WM_SHOW_CHIP {
+                // 从外部 ShowWindow 会绕开本实例的状态：它仍以为自己是隐藏的（hidden_by_user=true），
+                // 之后点托盘第一下会「显示但看不出变化」。改成发消息，由本实例自己复位状态。
+                app.hidden_by_user = false;
+                app.update_visibility();
+                app.raise_above_taskbar();
+                if app.visible {
+                    app.paint_now();
+                }
+                return 0;
+            }
             if msg == WM_QUIT_APP {
                 DestroyWindow(hwnd);
                 return 0;
@@ -1125,8 +1138,8 @@ pub fn run(trace: bool, demo: bool, t0: i64) {
         }
         if GetLastError() == ERROR_ALREADY_EXISTS {
             if let Some(h) = find_existing() {
-                ShowWindow(h, SW_SHOWNOACTIVATE);
-                SetWindowPos(h, hwnd_topmost(), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
+                // 交给窗口线程自己处理，不要在别的进程里直接 ShowWindow（会让它的状态脱节）
+                PostMessageW(h, WM_SHOW_CHIP, 0, 0);
             } else {
                 // 互斥体被一个没有窗口的僵尸实例占着（上次非正常退出）。
                 // 以前这里直接 return —— 用户看到的现象是「双击启动器毫无反应」，所以给一句人话。

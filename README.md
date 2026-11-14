@@ -340,3 +340,9 @@ PE 资源 0.5.0.0、Cargo.toml 2.0.2、README 2.0.0.0 三套并存 → 统一为
 
 - 亚克力从未生效：`enable_acrylic` 里 `GetProcAddress(user32, wide("SetWindowCompositionAttribute"))` 与 v0.7 修掉的 `SetWinEventHook` 是同一个 UTF-16 编码错误 → 永远拿不到地址。启用前还需给 `render` 的亚克力分支补一次清底，否则数值位数变短会留鬼影。
 - 资源条吞掉左端的任务栏点击（缺 `WM_NCHITTEST`），全屏进出仍有 ≤1 s 延迟。
+
+### v0.8.1（2026-11-14，OCR 评审后补丁）
+
+- **启动器二次启动的唤出改走消息**：另一个实例被托盘隐藏时，双击启动器原来是直接 `ShowWindow`，窗口亮了但本实例仍以为自己隐藏（`hidden_by_user=true`）→ 之后点托盘第一下「显示」毫无变化。现改为 `PostMessage(WM_SHOW_CHIP)`，由窗口线程复位状态再显示。实测：隐藏 → 二次启动 → 可见；再点托盘左键**仍能立刻隐藏**（状态已同步）。
+- `tools/_traytest2.py` 修成真正的回归脚本：校验 `PostMessageW` 返回值、用 `==` 比较、失败时退出码 1。
+- 评审报告见 `OCR审核-v0.8-20261114.md`。
