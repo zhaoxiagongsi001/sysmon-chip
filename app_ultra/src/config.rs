@@ -348,6 +348,35 @@ unsafe fn read_config(buf: &mut [u8]) -> usize {
     if config_path(&mut path).is_none() {
         return 0;
     }
+    let n = read_path(&path, buf);
+    if n >= buf.len() {
+        return n;
+    }
+    // v1.2：上次改名失败时 write_file 会故意留下完整的 .tmp（见那里的注释）。
+    // 主文件可能是直写中途断电留下的半截内容，所以两份都在时取更完整的那份，
+    // 而不是「主文件有内容就信它」——否则用户改过的设置会静默丢一半。
+    let len = match path.iter().position(|&c| c == 0) {
+        Some(i) => i,
+        None => return n,
+    };
+    let mut tmp = [0u16; 320];
+    if len + 4 >= tmp.len() {
+        return n;
+    }
+    tmp[..len].copy_from_slice(&path[..len]);
+    for (i, c) in ".tmp".encode_utf16().enumerate() {
+        tmp[len + i] = c;
+    }
+    let mut alt = [0u8; 1024];
+    let m = read_path(&tmp, &mut alt);
+    if m > n {
+        buf[..m].copy_from_slice(&alt[..m]);
+        return m;
+    }
+    n
+}
+
+unsafe fn read_path(path: &[u16], buf: &mut [u8]) -> usize {
     let h = CreateFileW(
         path.as_ptr(),
         GENERIC_READ,
@@ -436,9 +465,13 @@ unsafe fn write_file(path: &[u16], data: &[u8]) -> bool {
         return true;
     }
     // 改名被拒不等于数据丢了：杀软/索引器短暂占用目标文件是常见原因，
-    // 这时退回直接覆盖写（牺牲原子性，换取这次设置不白改）
-    let _ = DeleteFileW(tmp.as_ptr());
-    write_direct(path, data)
+    // 这时退回直接覆盖写（牺牲原子性，换取这次设置不白改）。
+    if write_direct(path, data) {
+        let _ = DeleteFileW(tmp.as_ptr());
+        return true;
+    }
+    // 直写也失败：保留 .tmp 不删——它内容是完整的，下次启动 read_config 会回读
+    false
 }
 
 /// 兜底写盘：直接覆盖目标文件，不做临时文件 + 改名。

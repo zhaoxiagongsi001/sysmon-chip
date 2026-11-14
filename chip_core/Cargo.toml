@@ -1,6 +1,6 @@
 [package]
 name = "chip-core"
-version = "1.1.0"
+version = "1.2.0"
 edition = "2021"
 description = "SysMon Chip 的 no_std 核心：布局 / 文本 / GDI 绘制 / 指标采样"
 license = "MIT"

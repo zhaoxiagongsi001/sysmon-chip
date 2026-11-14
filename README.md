@@ -2,9 +2,9 @@
 
 复刻 MangoDisk「任务栏资源条」外观的 Windows 11 小挂件：两行文字实时显示 **CPU / 内存 / 系统盘 / 上下行网速**，单文件、免安装、不要管理员、不写驱动、不联网。
 
-> **下载**：[SysMonChipLite v1.1](https://github.com/zhaoxiagongsi001/sysmon-chip/releases/latest)　·　源码：<https://github.com/zhaoxiagongsi001/sysmon-chip>　·　MIT
+> **下载**：[SysMonChipLite v1.2](https://github.com/zhaoxiagongsi001/sysmon-chip/releases/latest)　·　源码：<https://github.com/zhaoxiagongsi001/sysmon-chip>　·　MIT
 
-- 发布物（推荐）：`发布/SysMonChipLite.exe`（**49 KB**，PE 版本 **1.1.0.0**，no_std 极限轻量版，功能与界面同 std 版逐像素一致）
+- 发布物（推荐）：`发布/SysMonChipLite.exe`（**50.5 KB**，PE 版本 **1.2.0.0**，no_std 极限轻量版，功能与界面同 std 版逐像素一致）
 - 发布物（std 版，保底）：`发布/SysMonChip.exe`（326.5 KB，v0.3.0.0）；两版共用同一份配置与单实例互斥，可随时互换对照
 - **v2.0 Lite（2026-11-10）**：抽出 no_std 共享核心 `chip_core`，外壳 `app_ultra` 不链接 Rust std（文件/注册表/命令行走 Win32）→ 体积 **327 KB → 56 KB（−83%）**，启动更快，功能/界面/稳定性与 std 版持平
 - **v1.1（2026-11-10）**：字号 +8%（标签 9.75 pt / 数值 10 pt）、面板 194→198 逻辑像素并重排列位、网速宽度自适应、桌面模式贴任务栏上沿+屏幕右缘、新增 `--demo`
@@ -393,3 +393,20 @@ OCR 委派评审（`OCR审核-v0.9.1-20261114.md`）提出的 5 条发现与优�
 - **探针脚本**：`tools/verify.py` 的 `check_layout` 早退前会还原现场，注释与实现一致。
 
 实测（225%）：`cargo test` 14 项全绿；`tools/verify.py layout|padding|region|tray` 全 PASS；宽度全开 491 → 关网速 317 → 再关磁盘 221 物理 px；左右留白 19/18–20 px；托盘隐藏 / 显示 5.4 / 5.3 ms。
+## v1.2 评审修复（2026-11-14，PE 1.2.0.0）
+
+v1.1 的 OCR 委派评审留了 8 条 Low（V1–V8），本版逐条处理：
+
+| 条目 | 问题 | 处置 |
+| --- | --- | --- |
+| V1 | 写盘重试次数写死 120 次，注释「约两分钟」只在 1 s 刷新下成立 | 阈值按 `120_000 / interval` 换算，5 s 刷新是 24 次，下限 4 次 |
+| V2 | 重试耗尽后放弃，用户完全无感知 | 落 `%TEMP%\sysmonchip-save-error.txt` 记原因与当时指标 |
+| V3 | 改名失败后退回直写，直写再失败就删掉 `.tmp`，内容彻底丢失 | 直写失败时**保留** `.tmp`；`read_config` 主文件读不到时回读 `.tmp` |
+| V4 | 压缩后仍超宽的极端读数被裁掉，无任何痕迹 | 只落一次 `%TEMP%\sysmonchip-net-clipped.txt`（avail/up_w/dn_w），恢复不超宽时复位 |
+| V5 | 「最后一列」的判定散在渲染层，与固定列序耦合 | 收进 `paint::Layout::last_on()`，加单测 |
+| V6 | 箭头重叠判定写死在渲染分支里 | 收进 `paint::arrow_fits()`，加单测 |
+| V7 | `verify.py` 早退分支发完还原命令就 return，不确认是否真还原 | 回读宽度与贴边位置，不符就判 FAIL |
+| V8 | `.appdata-test/` 曾进过历史提交 | 已在 `.gitignore`；v1.1 已随 tag 发布，**不改写已发布历史**，仅记录 |
+
+单测 14 → **16 项**（新增 `last_on_follows_the_rightmost_enabled_item`、`arrow_fits_only_when_it_stays_left_of_the_text`）；
+`tools/verify.py layout|padding|region|tray` 全绿：宽度 491 / 317 / 221 物理 px（218 / 141 / 98 逻辑），右下角右缘锁 3456，`GetWindowRgn` type=3，托盘隐藏 5.5 ms / 显示 5.6 ms。

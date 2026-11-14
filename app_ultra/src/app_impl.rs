@@ -42,8 +42,8 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::{ReleaseCapture, SetCapture
 use crate::config::{self, Config, PosMode, Theme};
 use chip_core::metrics::{Metrics, Sampler};
 use chip_core::paint::{
-    layout, net_group_x, rgb, scale, wide, Fonts, Palette, Texts, WText, BASE_H, CORNER_R, ITEM_W,
-    NET_ARROW_W, NET_GAP,
+    arrow_fits, layout, net_group_x, rgb, scale, wide, Fonts, Palette, Texts, WText, BASE_H,
+    CORNER_R, ITEM_W, NET_ARROW_W, NET_GAP,
 };
 
 // ---- 消息 / 样式常量（用字面量，避免依赖 windows-sys 的常量命名） ----
@@ -237,8 +237,10 @@ pub struct App {
     dn_w: i32,
     /// 上一次写配置失败（文件被占用等）：下一个 tick 自动重试
     save_pending: bool,
-    /// 连续重试次数：放弃前最多试 120 次（约两分钟），避免盘被锁死时每秒空转
+    /// 连续重试次数：按 tick 累计，放弃阈值由刷新间隔换算成「约两分钟」
     save_tries: u32,
+    /// 压缩后仍放不下（极端读数）：只落一次诊断，避免每 tick 刷临时文件
+    net_clipped: bool,
     trace: bool,
     demo: bool,
     t0: i64,
@@ -280,6 +282,7 @@ impl App {
             dn_w: 0,
             save_pending: false,
             save_tries: 0,
+            net_clipped: false,
             trace,
             demo,
             t0,
@@ -463,7 +466,7 @@ impl App {
         ];
         // 最后一列（网速关掉时就是磁盘）的数值右对齐到列右缘：
         // 否则右侧留白会随数字宽度变化，和左边 8px 的固定内边距对不上。
-        let last_on = (0..4).rev().find(|&i| lay.on[i]).unwrap_or(0);
+        let last_on = lay.last_on().unwrap_or(0);
         for (i, lab, val, color) in cells {
             if !lay.on[i] {
                 continue;
@@ -502,11 +505,12 @@ impl App {
             let dnw = right - dn_x;
             draw_text(dst, &self.texts.up_speed, up_x, 0, upw, row_h, false, self.pal.label, f.label);
             draw_text(dst, &self.texts.down_speed, dn_x, row_h, dnw, self.h - row_h, false, self.pal.label, f.value);
-            // 两者都被夹在列左缘：极端宽读数下箭头会与数字重叠，这时宁可不画箭头
-            if up_ax + aw <= up_x {
+            // 两者都被夹在列左缘：极端宽读数下箭头会与数字重叠，这时宁可不画箭头。
+            // 能不能放得下由 paint::arrow_fits 判定，渲染层不自己做几何。
+            if arrow_fits(up_ax, aw, up_x) {
                 draw_text(dst, &self.texts.up_arrow, up_ax, 0, aw, row_h, false, self.pal.up, f.label);
             }
-            if dn_ax + aw <= dn_x {
+            if arrow_fits(dn_ax, aw, dn_x) {
                 draw_text(dst, &self.texts.down_arrow, dn_ax, row_h, aw, self.h - row_h, false, self.pal.down, f.value);
             }
         }
@@ -529,6 +533,41 @@ impl App {
 
     // ------------------------------------------------------------ 定时
 
+    /// 配置反复写不进去（盘被占、只读、权限）时留一份可查的现场：写失败后没有任何痕迹，
+    /// 用户只会觉得「我改了设置怎么没保存」，所以落一个 %TEMP% 诊断文件。
+    fn report_save_failed(&self, err: u32) {
+        let mut buf = [0u8; 128];
+        let mut n = 0usize;
+        for b in b"reason=save_failed_after_retry\nitems=" {
+            buf[n] = *b;
+            n += 1;
+        }
+        let it = &self.cfg.items;
+        for (flag, name) in [
+            (it.cpu, b"cpu " as &[u8]),
+            (it.mem, b"mem "),
+            (it.disk, b"disk "),
+            (it.net, b"net"),
+        ] {
+            if flag {
+                for b in name {
+                    buf[n] = *b;
+                    n += 1;
+                }
+            }
+        }
+        buf[n] = b'\n';
+        n += 1;
+        for b in b"last_error=" {
+            buf[n] = *b;
+            n += 1;
+        }
+        crate::push_u64(&mut buf, &mut n, err as u64);
+        buf[n] = b'\n';
+        n += 1;
+        config::write_temp("sysmonchip-save-error.txt", &buf[..n]);
+    }
+
     /// 写配置：失败（文件被占用等）就记下来，下一个 tick 自动重试，不打断用户操作。
     unsafe fn persist(&mut self) {
         if !self.cfg.save() {
@@ -546,9 +585,15 @@ impl App {
             if self.cfg.save() {
                 self.save_pending = false;
             } else {
+                // 立刻取样：再拖几步，GetLastError 就会被别的 Win32 调用覆盖
+                let err = unsafe { GetLastError() };
                 self.save_tries += 1;
-                if self.save_tries >= 120 {
+                // 预算按时间算：约两分钟，不绑定刷新间隔（5 秒间隔下是 24 次而不是 120 次）
+                let budget = (120_000 / self.cfg.interval.max(200)).max(4);
+                if self.save_tries >= budget {
                     self.save_pending = false;
+                    self.save_tries = 0;
+                    self.report_save_failed(err);
                 }
             }
         }
@@ -585,6 +630,33 @@ impl App {
                     dn_w = measure_text(hdc, f.value, &t.down_speed);
                 }
                 ReleaseDC(self.hwnd, hdc);
+                // 压缩后仍放不下（速率极端）：留一次诊断，否则用户只看到数字被裁掉
+                let clipped = up_w > avail || dn_w > avail;
+                if clipped && !self.net_clipped {
+                    self.net_clipped = true;
+                    let mut buf = [0u8; 96];
+                    let mut n = 0usize;
+                    for b in b"reason=net_text_clipped\navail=" {
+                        buf[n] = *b;
+                        n += 1;
+                    }
+                    crate::push_u64(&mut buf, &mut n, avail as u64);
+                    for b in b"\nup_w=" {
+                        buf[n] = *b;
+                        n += 1;
+                    }
+                    crate::push_u64(&mut buf, &mut n, up_w as u64);
+                    for b in b"\ndn_w=" {
+                        buf[n] = *b;
+                        n += 1;
+                    }
+                    crate::push_u64(&mut buf, &mut n, dn_w as u64);
+                    buf[n] = b'\n';
+                    n += 1;
+                    config::write_temp("sysmonchip-net-clipped.txt", &buf[..n]);
+                } else if !clipped {
+                    self.net_clipped = false;
+                }
             }
         }
         let width_changed = up_w != self.up_w || dn_w != self.dn_w;

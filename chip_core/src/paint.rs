@@ -52,6 +52,14 @@ pub fn layout(items: &crate::items::Items) -> Layout {
     Layout { on, x, width: cur + PAD_R }
 }
 
+impl Layout {
+    /// 最靠右那一列的下标：它的数值要右对齐到列右缘，右侧留白才与左边对称。
+    /// 四项全关时返回 None（正常配置下 `Config::load` 会把 CPU 兜回来，不会出现）。
+    pub fn last_on(&self) -> Option<usize> {
+        (0..4).rev().find(|&i| self.on[i])
+    }
+}
+
 /// 网速列内部排布：数字右缘贴列右缘，箭头紧贴数字左侧。
 ///
 /// 返回 `(数字左缘 x, 箭头左缘 x)`。两者都被夹在列左缘 `min_x` 处：
@@ -60,6 +68,12 @@ pub fn net_group_x(right: i32, text_w: i32, arrow_w: i32, gap: i32, min_x: i32) 
     let text_x = (right - text_w.max(0)).max(min_x);
     let arrow_x = (text_x - gap - arrow_w).max(min_x);
     (text_x, arrow_x)
+}
+
+/// 箭头是否还放得进数字左侧：放不下就不画（宁可少个箭头，也不让两坨字叠在一起）。
+/// 判定放在这里而不是渲染层，几何只有一处来源。
+pub fn arrow_fits(arrow_x: i32, arrow_w: i32, text_x: i32) -> bool {
+    arrow_x + arrow_w <= text_x
 }
 
 /// 两行文字的绘制矩形（相对面板顶端）
@@ -681,6 +695,32 @@ mod tests {
         assert_eq!(s(&t), "↑");
         t.set_arrow(false);
         assert_eq!(s(&t), "↓");
+    }
+}
+
+#[cfg(test)]
+mod v12_helpers {
+    use super::*;
+
+    #[test]
+    fn last_on_follows_the_rightmost_enabled_item() {
+        let all = Layout { on: [true; 4], x: [10, 51, 92, 135], width: 220 };
+        assert_eq!(all.last_on(), Some(3));
+        let no_net = Layout { on: [true, true, true, false], x: [10, 51, 92, -1], width: 143 };
+        assert_eq!(no_net.last_on(), Some(2));
+        let only_cpu = Layout { on: [true, false, false, false], x: [10, -1, -1, -1], width: 59 };
+        assert_eq!(only_cpu.last_on(), Some(0));
+        let none = Layout { on: [false; 4], x: [-1; 4], width: 16 };
+        assert_eq!(none.last_on(), None);
+    }
+
+    #[test]
+    fn arrow_fits_only_when_it_stays_left_of_the_text() {
+        // 边缘贴合：箭头右缘正好等于数字左缘也算放得下
+        assert!(arrow_fits(25, 18, 43));
+        assert!(!arrow_fits(26, 18, 43));
+        // 列左缘夹死时两者同 x：放不下，渲染层据此不画箭头
+        assert!(!arrow_fits(0, 18, 0));
     }
 }
 

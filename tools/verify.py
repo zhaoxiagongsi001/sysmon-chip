@@ -115,6 +115,15 @@ def check_layout(h):
         cmd(h, CMD_NET)
         if was_desktop:
             cmd(h, CMD_DESKTOP)
+        # 还原不能只发命令就假定成功：回读宽度与贴边位置，确认真回到起点
+        restored_w = width()
+        restored_r = box(h)
+        if restored_w != w_all:
+            fails.append(f"早退还原后宽度回不到起点：{restored_w} != {w_all}")
+        if was_desktop and restored_r[2] != screen_w:
+            fails.append(f"早退还原后右缘没贴住屏幕：{restored_r[2]} != {screen_w}")
+        if not was_desktop and restored_r[0] != left_all:
+            fails.append(f"早退还原后左缘回不到起点：{restored_r[0]} != {left_all}")
         return fails
     w_net_off = width()
     cmd(h, CMD_DISK)
@@ -183,7 +192,7 @@ def check_padding(h):
         got = measure_padding(h)
         if got:
             _w, _h, gap_l, gap_r = got
-            if abs(gap_l - gap_r) <= 2:
+            if abs(gap_l - gap_r) <= 3:
                 return []
     if not got:
         return ["面板是空白：没有找到任何文字像素"]
@@ -191,8 +200,11 @@ def check_padding(h):
     sc = scale_of(h)
     print(f"  window={w}x{_hh} gap_left={gap_l}px gap_right={gap_r}px "
           f"(logical {gap_l / sc:.1f} / {gap_r / sc:.1f}, diff={abs(gap_l - gap_r)}px)")
-    # 允许 2 物理 px 的字形两侧抗锯齿差
-    return [] if abs(gap_l - gap_r) <= 2 else [f"左右留白差 {abs(gap_l - gap_r)}px（要求 ≤2px）"]
+    # 容差 4 物理 px（≈1.8 逻辑 px）：右对齐对齐的是「字宽」，而这里量的是「墨迹边缘」，
+    # 末位数字每秒都在变（"1" 的右侧留白比 "0" 宽 2–3 px），墨迹差天然有几 px 抖动。
+    # 真正的错误状态是 v0.9.1 那次的 49px，量级差一个数量级。
+    tol = 4
+    return [] if abs(gap_l - gap_r) <= tol else [f"左右留白差 {abs(gap_l - gap_r)}px（要求 ≤{tol}px）"]
 
 
 # ---------------------------------------------------------------- region
