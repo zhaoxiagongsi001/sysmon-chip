@@ -2,7 +2,7 @@
 
 复刻 MangoDisk「任务栏资源条」外观的 Windows 11 小挂件：两行文字实时显示 **CPU / 内存 / 系统盘 / 上下行网速**，单文件、免安装、不要管理员、不写驱动、不联网。
 
-> **下载**：[SysMonChipLite v1.2](https://github.com/zhaoxiagongsi001/sysmon-chip/releases/latest)　·　源码：<https://github.com/zhaoxiagongsi001/sysmon-chip>　·　MIT
+> **下载**：[SysMonChipLite v1.2](https://github.com/zhaoxiagongsi001/sysmon-chip/releases/tag/v1.2)　·　源码：<https://github.com/zhaoxiagongsi001/sysmon-chip>　·　MIT
 
 - 发布物（推荐）：`发布/SysMonChipLite.exe`（**50.5 KB**，PE 版本 **1.2.0.0**，no_std 极限轻量版，功能与界面同 std 版逐像素一致）
 - 发布物（std 版，保底）：`发布/SysMonChip.exe`（326.5 KB，v0.3.0.0）；两版共用同一份配置与单实例互斥，可随时互换对照
