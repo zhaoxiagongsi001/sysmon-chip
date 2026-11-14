@@ -1,6 +1,6 @@
 [package]
 name = "sysmon-chip-lite"
-version = "2.0.2"
+version = "0.8.0"
 edition = "2021"
 description = "SysMon Chip Lite - no_std 极轻量资源条"
 build = "build.rs"

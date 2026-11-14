@@ -2,7 +2,7 @@
 
 复刻 MangoDisk「任务栏资源条」外观的 Windows 11 小挂件：两行文字实时显示 **CPU / 内存 / 系统盘 / 上下行网速**，单文件、免安装、不要管理员、不写驱动、不联网。
 
-- 发布物（推荐）：`发布/SysMonChipLite.exe`（**56.5 KB**，PE 版本 **2.0.0.0**，no_std 极限轻量版，功能与界面同 std 版逐像素一致）
+- 发布物（推荐）：`发布/SysMonChipLite.exe`（**46.5 KB**，PE 版本 **0.8.0.0**，no_std 极限轻量版，功能与界面同 std 版逐像素一致）
 - 发布物（std 版，保底）：`发布/SysMonChip.exe`（326.5 KB，v0.3.0.0）；两版共用同一份配置与单实例互斥，可随时互换对照
 - **v2.0 Lite（2026-11-10）**：抽出 no_std 共享核心 `chip_core`，外壳 `app_ultra` 不链接 Rust std（文件/注册表/命令行走 Win32）→ 体积 **327 KB → 56 KB（−83%）**，启动更快，功能/界面/稳定性与 std 版持平
 - **v1.1（2026-11-10）**：字号 +8%（标签 9.75 pt / 数值 10 pt）、面板 194→198 逻辑像素并重排列位、网速宽度自适应、桌面模式贴任务栏上沿+屏幕右缘、新增 `--demo`
@@ -141,7 +141,7 @@ D:/DSH/sysmon-chip/
 
 | | **SysMonChipLite.exe（v2.0，推荐）** | SysMonChip.exe（v1.1，保底） |
 |---|---|---|
-| exe 体积 | **56.5 KB**（含图标/版本资源） | 327.5 KB |
+| exe 体积 | **46.5 KB**（含图标/版本资源；v0.8 实测） | 327.5 KB |
 | 运行时 | **不链接 Rust std**：core + windows-sys + mingw crt2.o | std |
 | 进程依赖 DLL | KERNEL32 / msvcrt / advapi32 / gdi32 / iphlpapi / shell32 / user32（全系统自带） | 同上 |
 | 启动 P50（外部秒表 / 自报） | **32.5 / 33.5 ms** | 36.1 / 35.2 ms |
@@ -294,3 +294,49 @@ cargo build --release                        # -> .rust/target/release/SysMonChi
 
 - 版本 0.7.0.0，47616 B。构建：`cargo build --release`（no_std，增量 1 s 内）。
 
+
+---
+
+## v0.8 打包修复（2026-11-14）
+
+针对 `评审报告-2026-11-14.md` 的 8 项缺陷，v0.8 先修工程化最痛的 4 项（不动架构）：
+
+**1. 指标关掉再打开后，标签与 ↑↓ 永久消失（高）**
+
+`Texts::apply` 在关闭某项时 `clear()` 了标签和箭头，重新打开时只写数值，标签/箭头再也不回来。
+改成每次 `apply` 都按开关**重写**标签与箭头（`chip_core/src/paint.rs`），单测 `v08_regression` 覆盖关闭→重开。
+
+**2. 托盘左键隐藏 0.7–1 s 又自动冒出来（高）**
+
+`on_tray` 只把 `visible=false`，下一秒 `update_visibility()` 判定「应该可见」又 `SW_SHOW` 回来。
+新增 `App.hidden_by_user` 状态，托盘左键翻转它，`update_visibility` 以它为第一优先级。
+实测（`tools/_traytest2.py`，PostMessage 模拟托盘左键）：隐藏 20 ms 内生效并**稳定保持 3 s**；再点一次同样稳定显示。
+
+**3. 僵尸实例时双击启动器毫无反应（中）**
+
+单实例互斥体被上次非正常退出的进程占着、又找不到窗口时，旧代码静默 `return`。
+现在弹一句人话：「SysMonChip 已在运行（窗口丢失）。请在任务管理器结束 SysMonChipLite.exe 后重试。」
+
+**4. 版本号 / 体积三处不一致（低）**
+
+PE 资源 0.5.0.0、Cargo.toml 2.0.2、README 2.0.0.0 三套并存 → 统一为 **0.8.0.0**（`Cargo.toml` + `assets/app.rc`），README 体积改为实测 **46.5 KB**。
+
+**工程化**
+
+- `git init` + 首次基线提交（v0.7），此后每次改动可 diff、可回滚。
+- `chip_core` 单测 5 项全绿（pct / rate / 箭头 / 标签恢复 / 单项关闭不影响其它项）：`cd chip_core && cargo test`。
+
+**实测**
+
+| 项目 | v0.7 | v0.8 |
+| --- | --- | --- |
+| 托盘左键隐藏 | 705 ms 后自动复现 | **隐藏后稳定保持（3 s 采样）** |
+| 标签/箭头关开 | 永久丢失 | 立即恢复（单测覆盖） |
+| PE 版本 | 0.5.0.0 | **0.8.0.0** |
+| 体积 | 47616 B | **47616 B**（未增） |
+| 工作集 | 1.59 MB | 1.48 MB（启动后） |
+
+**已知未修（进 v0.9）**
+
+- 亚克力从未生效：`enable_acrylic` 里 `GetProcAddress(user32, wide("SetWindowCompositionAttribute"))` 与 v0.7 修掉的 `SetWinEventHook` 是同一个 UTF-16 编码错误 → 永远拿不到地址。启用前还需给 `render` 的亚克力分支补一次清底，否则数值位数变短会留鬼影。
+- 资源条吞掉左端的任务栏点击（缺 `WM_NCHITTEST`），全屏进出仍有 ≤1 s 延迟。

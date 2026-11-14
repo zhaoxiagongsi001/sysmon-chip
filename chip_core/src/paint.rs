@@ -214,35 +214,94 @@ impl Texts {
         t
     }
 
+    /// 按开关重算所有文本。
+    ///
+    /// 标签与箭头必须每次按开关**重新写入**（而不是只在 `new()` 里写一次）：
+    /// 关掉某项时 `clear()` 后，如果再打开却只写数值，标签和 ↑↓ 会永久消失。
     pub fn apply(&mut self, m: &Metrics, items: &crate::items::Items) {
         let (cpu, mem, disk, net) = (items.cpu, items.mem, items.disk, items.net);
         if cpu {
+            self.cpu_lab.set_ascii(b"CPU");
             self.cpu_val.set_pct(m.cpu);
         } else {
-            self.cpu_val.clear();
             self.cpu_lab.clear();
+            self.cpu_val.clear();
         }
         if mem {
+            self.mem_lab.set_ascii(b"MEM");
             self.mem_val.set_pct(m.mem);
         } else {
-            self.mem_val.clear();
             self.mem_lab.clear();
+            self.mem_val.clear();
         }
         if disk {
+            self.disk_lab.set_ascii(b"DISK");
             self.disk_val.set_pct(m.disk);
         } else {
-            self.disk_val.clear();
             self.disk_lab.clear();
+            self.disk_val.clear();
         }
         if net {
+            self.up_arrow.set_arrow(true);
+            self.down_arrow.set_arrow(false);
             self.up_speed.set_rate(m.up);
             self.down_speed.set_rate(m.down);
         } else {
-            self.up_speed.clear();
-            self.down_speed.clear();
             self.up_arrow.clear();
             self.down_arrow.clear();
+            self.up_speed.clear();
+            self.down_speed.clear();
         }
+    }
+}
+
+#[cfg(test)]
+mod v08_regression {
+    use super::*;
+    use crate::items::Items;
+
+    fn text(t: &WText) -> String {
+        String::from_utf16_lossy(&t.units[..t.len.min(t.units.len())])
+    }
+
+    fn metrics() -> Metrics {
+        Metrics { cpu: 100, mem: 7, disk: 42, up: 2_949_760, down: 1536 }
+    }
+
+    /// v0.8 回归：指标关掉再打开，标签与 ↑↓ 必须回来。
+    #[test]
+    fn toggling_items_back_on_restores_labels_and_arrows() {
+        let m = metrics();
+        let mut t = Texts::new();
+        t.apply(&m, &Items::ALL);
+        assert_eq!(text(&t.cpu_lab), "CPU");
+        assert_eq!(text(&t.up_arrow), "\u{2191}");
+
+        let off = Items { cpu: false, mem: false, disk: false, net: false };
+        t.apply(&m, &off);
+        assert_eq!(text(&t.cpu_lab), "");
+        assert_eq!(text(&t.up_arrow), "");
+        assert_eq!(text(&t.cpu_val), "");
+
+        t.apply(&m, &Items::ALL);
+        assert_eq!(text(&t.cpu_lab), "CPU");
+        assert_eq!(text(&t.mem_lab), "MEM");
+        assert_eq!(text(&t.disk_lab), "DISK");
+        assert_eq!(text(&t.up_arrow), "\u{2191}");
+        assert_eq!(text(&t.down_arrow), "\u{2193}");
+        assert_eq!(text(&t.mem_val), "7%");
+    }
+
+    /// 单项关闭时其它项不受影响。
+    #[test]
+    fn disabling_cpu_keeps_mem_and_disk() {
+        let m = metrics();
+        let mut t = Texts::new();
+        t.apply(&m, &Items { cpu: false, mem: true, disk: true, net: true });
+        assert_eq!(text(&t.cpu_lab), "");
+        assert_eq!(text(&t.mem_lab), "MEM");
+        assert_eq!(text(&t.disk_lab), "DISK");
+        assert_eq!(text(&t.mem_val), "7%");
     }
 }
 

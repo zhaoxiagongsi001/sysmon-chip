@@ -29,7 +29,7 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     AppendMenuW, CreatePopupMenu, CreateWindowExW, DefWindowProcW, DestroyMenu, DestroyWindow,
     SetWindowTextW,
     DispatchMessageW, FindWindowExW, FindWindowW, GetClassNameW, GetCursorPos, GetForegroundWindow,
-    GetMessageW, GetWindow,
+    GetMessageW, GetWindow, MessageBoxW, MB_ICONINFORMATION, MB_OK,
     GetWindowLongPtrW, GetWindowRect, IsWindowVisible, KillTimer, LoadCursorW, LoadImageW,
     PostMessageW, PostQuitMessage, RegisterClassExW, RegisterWindowMessageW, SetForegroundWindow,
     SetTimer, SetWindowLongPtrW, SetWindowPos, ShowWindow, TrackPopupMenuEx, TranslateMessage,
@@ -219,6 +219,8 @@ pub struct App {
     dragging: bool,
     in_menu: bool,
     visible: bool,
+    /// 用户用托盘左键手动隐藏：为真时 `update_visibility` 不再把它显示回来
+    hidden_by_user: bool,
     tray_ok: bool,
     tray_cb: u32,
     taskbar_created: u32,
@@ -253,6 +255,7 @@ impl App {
             dragging: false,
             in_menu: false,
             visible: false,
+            hidden_by_user: false,
             tray_ok: false,
             tray_cb: WM_APP + 1,
             taskbar_created: 0,
@@ -498,7 +501,7 @@ impl App {
     }
 
     unsafe fn update_visibility(&mut self) {
-        let mut want = true;
+        let mut want = !self.hidden_by_user;
         if self.cfg.hide_fs && self.is_fullscreen_foreground() {
             want = false;
         }
@@ -789,12 +792,11 @@ impl App {
         let low = lp & 0xFFFF;
         match low {
             WM_LBUTTONUP => {
+                // 托盘左键 = 手动显示/隐藏。必须记状态，否则下一个 tick 的
+                // update_visibility 会立刻把它重新显示出来（v0.7 及以前的实际表现）。
+                self.hidden_by_user = !self.hidden_by_user;
+                self.update_visibility();
                 if self.visible {
-                    ShowWindow(self.hwnd, SW_HIDE);
-                    self.visible = false;
-                } else {
-                    ShowWindow(self.hwnd, SW_SHOWNOACTIVATE);
-                    self.visible = true;
                     self.raise_above_taskbar();
                     self.paint_now();
                 }
@@ -1125,6 +1127,15 @@ pub fn run(trace: bool, demo: bool, t0: i64) {
             if let Some(h) = find_existing() {
                 ShowWindow(h, SW_SHOWNOACTIVATE);
                 SetWindowPos(h, hwnd_topmost(), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
+            } else {
+                // 互斥体被一个没有窗口的僵尸实例占着（上次非正常退出）。
+                // 以前这里直接 return —— 用户看到的现象是「双击启动器毫无反应」，所以给一句人话。
+                MessageBoxW(
+                    ptr::null_mut(),
+                    wide("SysMonChip 已在运行（窗口丢失）。请在任务管理器结束 SysMonChipLite.exe 后重试。").as_ptr(),
+                    wide("SysMonChip").as_ptr(),
+                    MB_OK | MB_ICONINFORMATION,
+                );
             }
             return;
         }

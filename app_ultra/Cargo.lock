@@ -11,7 +11,7 @@ dependencies = [
 
 [[package]]
 name = "sysmon-chip-lite"
-version = "2.0.2"
+version = "0.8.0"
 dependencies = [
  "chip-core",
  "windows-sys",
