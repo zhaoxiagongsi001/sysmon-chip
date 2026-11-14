@@ -20,6 +20,36 @@ pub const COL_DISK: i32 = 94;
 pub const COL_NET: i32 = 140;
 pub const RIGHT_EDGE: i32 = 228;
 
+/// v0.9 布局：每个指标占的列宽（100% DPI），面板只给开着的指标分配位置
+pub const ITEM_W: [i32; 4] = [42, 42, 46, 88];
+/// v0.9 布局：面板左右内边距
+pub const PAD_L: i32 = 10;
+pub const PAD_R: i32 = 8;
+/// v0.9 圆角：外露竖边的圆角半径（100% DPI，逻辑像素）
+pub const CORNER_R: i32 = 6;
+
+/// 当前可见指标的横向排布。关闭某个指标后，后面的列整体左移，面板宽度同步收缩；
+/// 因此贴着屏幕左缘的左对齐位置天然保持不变（右边缘往回缩）。
+#[derive(Clone, Copy)]
+pub struct Layout {
+    pub on: [bool; 4],
+    pub x: [i32; 4],
+    pub width: i32,
+}
+
+pub fn layout(items: &crate::items::Items) -> Layout {
+    let on = [items.cpu, items.mem, items.disk, items.net];
+    let mut x = [-1i32; 4];
+    let mut cur = PAD_L;
+    for (i, slot) in x.iter_mut().enumerate() {
+        if on[i] {
+            *slot = cur;
+            cur += ITEM_W[i];
+        }
+    }
+    Layout { on, x, width: cur + PAD_R }
+}
+
 /// 两行文字的绘制矩形（相对面板顶端）
 pub const ROW1_Y: i32 = 0;
 pub const ROW1_H: i32 = 24;
@@ -302,6 +332,59 @@ mod v08_regression {
         assert_eq!(text(&t.mem_lab), "MEM");
         assert_eq!(text(&t.disk_lab), "DISK");
         assert_eq!(text(&t.mem_val), "7%");
+    }
+}
+
+#[cfg(test)]
+mod v09_layout {
+    use super::*;
+    use crate::items::Items;
+
+    /// 全开时布局必须与老的固定宽度一致（BASE_W / COL_* 是它的历史取值）。
+    #[test]
+    fn all_items_match_legacy_layout() {
+        let lay = layout(&Items::ALL);
+        assert_eq!(lay.width, BASE_W);
+        assert_eq!(lay.x, [COL_CPU, COL_MEM, COL_DISK, COL_NET]);
+        assert!(lay.on.iter().all(|v| *v));
+    }
+
+    /// 关掉 CPU：后面三项整体左移一个列宽，面板宽度同步收缩一列。
+    #[test]
+    fn disabling_cpu_shifts_columns_left_and_shrinks() {
+        let lay = layout(&Items { cpu: false, mem: true, disk: true, net: true });
+        assert_eq!(lay.on, [false, true, true, true]);
+        assert_eq!(lay.x[1], PAD_L);
+        assert_eq!(lay.x[2], PAD_L + ITEM_W[1]);
+        assert_eq!(lay.x[3], PAD_L + ITEM_W[1] + ITEM_W[2]);
+        assert_eq!(lay.width, BASE_W - ITEM_W[0]);
+    }
+
+    /// 关掉网速：宽度收缩最多，右边不留空白。
+    #[test]
+    fn disabling_net_drops_its_whole_column() {
+        let lay = layout(&Items { cpu: true, mem: true, disk: true, net: false });
+        assert_eq!(lay.width, BASE_W - ITEM_W[3]);
+        assert_eq!(lay.x[3], -1);
+    }
+
+    /// 只剩一项时宽度最窄，但内边距仍在（不贴边）。
+    #[test]
+    fn single_item_keeps_padding() {
+        let lay = layout(&Items { cpu: false, mem: false, disk: false, net: true });
+        assert_eq!(lay.width, PAD_L + ITEM_W[3] + PAD_R);
+        assert_eq!(lay.x[3], PAD_L);
+    }
+
+    /// 关闭项的位置是 -1，误用时不会画在 x=0。
+    #[test]
+    fn disabled_slots_are_marked() {
+        let lay = layout(&Items { cpu: false, mem: false, disk: true, net: false });
+        assert_eq!(lay.x[0], -1);
+        assert_eq!(lay.x[1], -1);
+        assert_eq!(lay.x[2], PAD_L);
+        assert_eq!(lay.x[3], -1);
+        assert_eq!(lay.width, PAD_L + ITEM_W[2] + PAD_R);
     }
 }
 

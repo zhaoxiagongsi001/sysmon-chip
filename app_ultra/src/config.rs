@@ -83,6 +83,10 @@ impl Config {
             c.apply(&buf[..n]);
         }
         c.interval = c.interval.clamp(200, 10_000);
+        // v0.9：四项全关会让面板缩成一条空白，配置被手改成全 0 时兜底回 CPU
+        if !(c.items.cpu || c.items.mem || c.items.disk || c.items.net) {
+            c.items.cpu = true;
+        }
         c
     }
 

@@ -10,11 +10,12 @@ use windows_sys::Win32::Foundation::{COLORREF, SIZE,
     GetLastError, HINSTANCE, HWND, LPARAM, LRESULT, POINT, RECT, WPARAM, ERROR_ALREADY_EXISTS,
 };
 use windows_sys::Win32::Graphics::Gdi::{
-    BeginPaint, CreateRoundRectRgn, CreateSolidBrush, DeleteObject, DrawTextW, EndPaint, FillRect, GetDC,
+    BeginPaint, CombineRgn, CreateRectRgn, CreateRoundRectRgn, CreateSolidBrush, DeleteObject,
+    DrawTextW, EndPaint, FillRect, GetDC,
     GetTextExtentPoint32W,
     GetMonitorInfoW, InvalidateRect, MonitorFromWindow, ReleaseDC, SelectObject, SetBkMode,
-    SetTextColor, SetWindowRgn, UpdateWindow, MONITORINFO, MONITOR_DEFAULTTONEAREST, HDC, HFONT,
-    HGDIOBJ, PAINTSTRUCT,
+    SetTextColor, SetWindowRgn, UpdateWindow, MONITORINFO, MONITOR_DEFAULTTONEAREST, RGN_OR, HDC,
+    HFONT, HGDIOBJ, PAINTSTRUCT,
 };
 use windows_sys::Win32::System::LibraryLoader::{GetModuleHandleW, GetProcAddress};
 use windows_sys::Win32::System::Threading::{
@@ -41,8 +42,7 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::{ReleaseCapture, SetCapture
 use crate::config::{self, Config, PosMode, Theme};
 use chip_core::metrics::{Metrics, Sampler};
 use chip_core::paint::{
-    rgb, scale, wide, Fonts, Palette, Texts, WText, BASE_H, BASE_W, COL_CPU, COL_DISK, COL_MEM,
-    COL_NET, RIGHT_EDGE, ROW1_H, ROW1_Y, ROW2_H, ROW2_Y,
+    layout, rgb, scale, wide, Fonts, Palette, Texts, WText, BASE_H, BASE_W, CORNER_R, ITEM_W,
 };
 
 // ---- 消息 / 样式常量（用字面量，避免依赖 windows-sys 的常量命名） ----
@@ -51,6 +51,7 @@ const WM_DESTROY: u32 = 2;
 const WM_PAINT: u32 = 15;
 const WM_ERASEBKGND: u32 = 20;
 const WM_SETTINGCHANGE: u32 = 26;
+const WM_COMMAND: u32 = 273;
 const WM_DISPLAYCHANGE: u32 = 126;
 const WM_NCCREATE: u32 = 129;
 const WM_TIMER: u32 = 275;
@@ -276,7 +277,7 @@ impl App {
         if self.dpi == 0 {
             self.dpi = 96;
         }
-        self.w = scale(BASE_W, self.dpi);
+        self.w = scale(layout(&self.cfg.items).width, self.dpi);
         // v0.3：高度 = 任务栏真实高度（整条覆盖），取不到时退回 48 逻辑
         self.h = match Self::taskbar_rect() {
             Some(r) => ((r.bottom - r.top) - scale(1, self.dpi)).max(scale(24, self.dpi)),
@@ -304,8 +305,44 @@ impl App {
     }
 
     unsafe fn apply_corners(&self) {
-        // v0.3：整条覆盖任务栏，直角矩形即可；显式清掉可能残留的区域
-        SetWindowRgn(self.hwnd, ptr::null_mut(), 1);
+        // v0.9：只圆「外露的那条竖边」——贴着屏幕/任务栏的那一侧保持直角，
+        // 这样看起来是嵌在那里的；矩形窗口自身不做圆角，靠窗口区域裁出来。
+        if self.w <= 0 || self.h <= 0 {
+            return;
+        }
+        let r = scale(CORNER_R, self.dpi).max(2);
+        let (rw, rh) = (self.w + 1, self.h + 1);
+        let right = self.rounds_right();
+        let rgn = CreateRoundRectRgn(0, 0, rw, rh, r * 2, r * 2);
+        if rgn.is_null() {
+            return;
+        }
+        // 把贴屏一侧被圆掉的两个角补回直角
+        let sq = CreateRectRgn(
+            if right { 0 } else { rw - r - 1 },
+            0,
+            if right { r + 1 } else { rw },
+            rh,
+        );
+        if !sq.is_null() {
+            CombineRgn(rgn, rgn, sq, RGN_OR);
+            DeleteObject(sq as _);
+        }
+        // SetWindowRgn 成功后区域归系统所有，不能再 DeleteObject
+        if SetWindowRgn(self.hwnd, rgn, 1) == 0 {
+            DeleteObject(rgn as _);
+        }
+    }
+
+    /// 圆角该长在哪一侧：窗口在屏幕左半边 → 外露边是右边（左缘贴屏）。
+    unsafe fn rounds_right(&self) -> bool {
+        let mi = self.monitor_info();
+        let mut r = rect_zero();
+        if GetWindowRect(self.hwnd, &mut r) == 0 {
+            return true;
+        }
+        let cx = (r.left + r.right) / 2;
+        cx < (mi.rcMonitor.left + mi.rcMonitor.right) / 2
     }
 
     // ------------------------------------------------------------ 定位
@@ -389,6 +426,7 @@ impl App {
             PosMode::Desktop => self.desktop_pos(),
         };
         SetWindowPos(self.hwnd, hwnd_topmost(), x, y, self.w, self.h, SWP_NOACTIVATE);
+        self.apply_corners();
     }
 
     // ------------------------------------------------------------ 绘制
@@ -403,25 +441,31 @@ impl App {
             FillRect(dst, &rc, self.brush as _);
         }
         let m = &self.metrics;
-        let cols = [
-            (COL_CPU, &self.texts.cpu_lab, &self.texts.cpu_val, self.pal.level(m.cpu)),
-            (COL_MEM, &self.texts.mem_lab, &self.texts.mem_val, self.pal.level(m.mem)),
-            (COL_DISK, &self.texts.disk_lab, &self.texts.disk_val, self.pal.level(m.disk)),
+        let lay = layout(&self.cfg.items);
+        let cells = [
+            (0usize, &self.texts.cpu_lab, &self.texts.cpu_val, self.pal.level(m.cpu)),
+            (1, &self.texts.mem_lab, &self.texts.mem_val, self.pal.level(m.mem)),
+            (2, &self.texts.disk_lab, &self.texts.disk_val, self.pal.level(m.disk)),
         ];
-        for (x, lab, val, color) in cols {
-            let px = scale(x, dpi);
-            let pw = scale(40, dpi);
+        for (i, lab, val, color) in cells {
+            if !lay.on[i] {
+                continue;
+            }
+            let px = scale(lay.x[i], dpi);
+            let pw = scale(ITEM_W[i] - 2, dpi);
             draw_text(dst, lab, px, 0, pw, row_h, false, self.pal.label, f.label);
             draw_text(dst, val, px, row_h, pw, self.h - row_h, false, color, f.value);
         }
-        let nx = scale(COL_NET, dpi);
-        let aw = scale(8, dpi);
-        let sx = nx + aw + scale(2, dpi);
-        let sw = scale(RIGHT_EDGE - COL_NET, dpi) - aw - scale(2, dpi);
-        draw_text(dst, &self.texts.up_arrow, nx, 0, aw, row_h, false, self.pal.up, f.label);
-        draw_text(dst, &self.texts.up_speed, sx, 0, sw, row_h, false, self.pal.label, f.label);
-        draw_text(dst, &self.texts.down_arrow, nx, row_h, aw, self.h - row_h, false, self.pal.down, f.value);
-        draw_text(dst, &self.texts.down_speed, sx, row_h, sw, self.h - row_h, false, self.pal.label, f.value);
+        if lay.on[3] {
+            let nx = scale(lay.x[3], dpi);
+            let aw = scale(8, dpi);
+            let sx = nx + aw + scale(2, dpi);
+            let sw = scale(ITEM_W[3], dpi) - aw - scale(2, dpi);
+            draw_text(dst, &self.texts.up_arrow, nx, 0, aw, row_h, false, self.pal.up, f.label);
+            draw_text(dst, &self.texts.up_speed, sx, 0, sw, row_h, false, self.pal.label, f.label);
+            draw_text(dst, &self.texts.down_arrow, nx, row_h, aw, self.h - row_h, false, self.pal.down, f.value);
+            draw_text(dst, &self.texts.down_speed, sx, row_h, sw, self.h - row_h, false, self.pal.label, f.value);
+        }
     }
 
     unsafe fn paint_now(&mut self) {
@@ -459,7 +503,7 @@ impl App {
         t.apply(&m, &self.cfg.items);
         // 宽度自适应：网速右对齐放不下时退成整数格式，绝不和箭头重叠
         if let Some(f) = &self.fonts {
-            let avail = scale(RIGHT_EDGE - COL_NET, self.dpi) - scale(9, self.dpi);
+            let avail = scale(ITEM_W[3], self.dpi) - scale(9, self.dpi);
             let hdc = GetDC(self.hwnd);
             if !hdc.is_null() {
                 if measure_text(hdc, f.label, &t.up_speed) > avail {
@@ -644,10 +688,20 @@ impl App {
 
     unsafe fn on_cmd(&mut self, cmd: u32) {
         match cmd {
-            1 => self.cfg.items.cpu = !self.cfg.items.cpu,
-            2 => self.cfg.items.mem = !self.cfg.items.mem,
-            3 => self.cfg.items.disk = !self.cfg.items.disk,
-            4 => self.cfg.items.net = !self.cfg.items.net,
+            1..=4 => {
+                let mut items = self.cfg.items;
+                match cmd {
+                    1 => items.cpu = !items.cpu,
+                    2 => items.mem = !items.mem,
+                    3 => items.disk = !items.disk,
+                    _ => items.net = !items.net,
+                }
+                // v0.9：至少保留一项，否则面板会缩成一条空白
+                if !(items.cpu || items.mem || items.disk || items.net) {
+                    return;
+                }
+                self.cfg.items = items;
+            }
             11 => {
                 self.cfg.mode = PosMode::Desktop;
                 self.apply_position();
@@ -697,11 +751,24 @@ impl App {
             }
             _ => {}
         }
+        self.relayout();
         self.cfg.save();
         let mut t = self.texts;
         t.apply(&self.metrics, &self.cfg.items);
         self.texts = t;
         InvalidateRect(self.hwnd, ptr::null(), 1);
+    }
+
+    /// v0.9：按当前可见指标重算宽度。贴屏那一侧保持不动：左对齐（任务栏左端）
+    /// 宽度从右侧缩回，右对齐（桌面右下角 / 贴托盘）左缘左移，视觉上都还是贴边的。
+    unsafe fn relayout(&mut self) {
+        let w = scale(layout(&self.cfg.items).width, self.dpi);
+        if w == self.w {
+            self.apply_corners();
+            return;
+        }
+        self.w = w;
+        self.apply_position();
     }
 
     fn set_interval(&mut self, ms: u32) {
@@ -732,7 +799,7 @@ impl App {
     unsafe fn on_display_change(&mut self) {
         let dpi = GetDpiForWindow(self.hwnd);
         self.dpi = if dpi == 0 { GetDpiForSystem() } else { dpi };
-        let w = scale(BASE_W, self.dpi);
+        let w = scale(layout(&self.cfg.items).width, self.dpi);
         let h = match Self::taskbar_rect() {
             Some(r) => ((r.bottom - r.top) - scale(1, self.dpi)).max(scale(24, self.dpi)),
             None => scale(BASE_H, self.dpi),
@@ -1034,6 +1101,15 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) 
         }
         WM_RBUTTONUP => {
             app.on_menu();
+            0
+        }
+        // 菜单走 TPM_RETURNCMD 自己派发命令；这里额外接受 WM_COMMAND，
+        // 便于用脚本/自动化驱动同一条命令通道（也符合 Windows 常规用法）。
+        WM_COMMAND if lp == 0 => {
+            let cmd = (wp & 0xFFFF) as u32;
+            if cmd != 0 {
+                app.on_cmd(cmd);
+            }
             0
         }
         WM_SETTINGCHANGE => {
