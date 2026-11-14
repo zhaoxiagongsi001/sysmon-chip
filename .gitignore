@@ -2,3 +2,6 @@ target/
 发布/*.pdb
 tools/__pycache__/
 *.tmp
+
+# 配置读写自测用的假 APPDATA（verify.py 会临时造）
+.appdata-test/

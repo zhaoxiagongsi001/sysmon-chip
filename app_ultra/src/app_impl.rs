@@ -235,8 +235,10 @@ pub struct App {
     /// 网速两行文字在当前 DPI 下的实测宽度（px）：每 tick 算一次，render 不再每帧量
     up_w: i32,
     dn_w: i32,
-    /// 上一次写配置失败（文件被占用等）：下一个 tick 自动重试，直到写成功
+    /// 上一次写配置失败（文件被占用等）：下一个 tick 自动重试
     save_pending: bool,
+    /// 连续重试次数：放弃前最多试 120 次（约两分钟），避免盘被锁死时每秒空转
+    save_tries: u32,
     trace: bool,
     demo: bool,
     t0: i64,
@@ -277,6 +279,7 @@ impl App {
             up_w: 0,
             dn_w: 0,
             save_pending: false,
+            save_tries: 0,
             trace,
             demo,
             t0,
@@ -530,15 +533,24 @@ impl App {
     unsafe fn persist(&mut self) {
         if !self.cfg.save() {
             self.save_pending = true;
+            self.save_tries = 0;
         }
     }
 
     unsafe fn on_timer(&mut self) {
         self.tick = self.tick.wrapping_add(1);
         self.raises = 0;
-        // 上一次写配置没成功：每秒重试一次，直到写进去为止
-        if self.save_pending && self.cfg.save() {
-            self.save_pending = false;
+        // 上一次写配置没成功：每秒重试一次；连续失败约两分钟就放弃，
+        // 否则磁盘被锁死时这里会一直空转
+        if self.save_pending {
+            if self.cfg.save() {
+                self.save_pending = false;
+            } else {
+                self.save_tries += 1;
+                if self.save_tries >= 120 {
+                    self.save_pending = false;
+                }
+            }
         }
         // 菜单/拖动时不抢 z 序；其余每秒自查一次是否被任务栏压住（真的被压才提层）
         if !self.in_menu && !self.dragging && self.covered_by_taskbar() {
