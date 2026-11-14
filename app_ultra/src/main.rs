@@ -27,6 +27,69 @@ fn panic(_info: &PanicInfo) -> ! {
     unsafe { ExitProcess(3) }
 }
 
+/// PE 入口。构建时用 `-Wl,--entry=chip_entry` 指定，让链接器不再引用 mingw 的 crt2.o
+/// 启动代码（约占 .text 的 18%），那些 init 表/atexit/argv 解析本程序一个都不用。
+#[no_mangle]
+pub extern "system" fn chip_entry() -> ! {
+    let rc = WinMain(core::ptr::null_mut(), core::ptr::null_mut(), core::ptr::null(), 1);
+    unsafe { ExitProcess(rc as u32) }
+}
+
+// 剥掉 CRT 后没人再提供这四个符号（平时由 msvcrt / libgcc 提供）。编译器会在
+// 结构体搬运、数组清零这类地方自动调用它们，所以必须自带一份。
+// 名字与标准库运行时重名是本意，关掉那条 lint 的噪音。
+#[allow(suspicious_runtime_symbol_definitions)]
+#[no_mangle]
+pub unsafe extern "C" fn memcpy(dst: *mut u8, src: *const u8, n: usize) -> *mut u8 {
+    let mut i = 0;
+    while i < n {
+        *dst.add(i) = *src.add(i);
+        i += 1;
+    }
+    dst
+}
+
+#[allow(suspicious_runtime_symbol_definitions)]
+#[no_mangle]
+pub unsafe extern "C" fn memmove(dst: *mut u8, src: *const u8, n: usize) -> *mut u8 {
+    if (dst as usize) < (src as usize) {
+        memcpy(dst, src, n)
+    } else {
+        let mut i = n;
+        while i > 0 {
+            i -= 1;
+            *dst.add(i) = *src.add(i);
+        }
+        dst
+    }
+}
+
+#[allow(suspicious_runtime_symbol_definitions)]
+#[no_mangle]
+pub unsafe extern "C" fn memset(dst: *mut u8, c: i32, n: usize) -> *mut u8 {
+    let mut i = 0;
+    while i < n {
+        *dst.add(i) = c as u8;
+        i += 1;
+    }
+    dst
+}
+
+#[allow(suspicious_runtime_symbol_definitions)]
+#[no_mangle]
+pub unsafe extern "C" fn memcmp(a: *const u8, b: *const u8, n: usize) -> i32 {
+    let mut i = 0;
+    while i < n {
+        let x = *a.add(i);
+        let y = *b.add(i);
+        if x != y {
+            return x as i32 - y as i32;
+        }
+        i += 1;
+    }
+    0
+}
+
 #[no_mangle]
 pub extern "system" fn WinMain(_h: HINSTANCE, _p: HINSTANCE, _cmd: *const u8, _show: i32) -> i32 {
     unsafe {

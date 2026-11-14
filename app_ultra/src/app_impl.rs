@@ -11,7 +11,7 @@ use windows_sys::Win32::Foundation::{COLORREF, SIZE,
 };
 use windows_sys::Win32::Graphics::Gdi::{
     BeginPaint, CombineRgn, CreateRectRgn, CreateRoundRectRgn, CreateSolidBrush, DeleteObject,
-    DrawTextW, EndPaint, FillRect, GetDC,
+    EndPaint, ExtTextOutW, FillRect, GetDC,
     GetTextExtentPoint32W,
     GetMonitorInfoW, InvalidateRect, MonitorFromWindow, ReleaseDC, SelectObject, SetBkMode,
     SetTextColor, SetWindowRgn, UpdateWindow, MONITORINFO, MONITOR_DEFAULTTONEAREST, RGN_OR, HDC,
@@ -186,12 +186,28 @@ unsafe fn draw_text(
     if t.is_empty() || w <= 0 {
         return;
     }
-    let mut rc = RECT { left: x, top: y, right: x + w, bottom: y + h };
-    let fmt = 0x0004u32 | 0x0020u32 | 0x0800u32 | if right { 0x0002u32 } else { 0x0000u32 };
+    // v1.3：DrawTextW 每次都要走一遍 DT_ 格式解析与断行计算，实测每 tick 占掉绘制成本的
+    // 大头。数字/字母都是单行 ASCII，这里自己量宽定位后一次 ExtTextOutW 出字，
+    // 语义等价（水平居中/右对齐由 x 算出，垂直居中由 (h - cy) / 2 复刻 DT_VCENTER）。
     SelectObject(hdc, font as HGDIOBJ);
     SetTextColor(hdc, color);
     SetBkMode(hdc, 1);
-    DrawTextW(hdc, t.ptr(), t.len as i32, &mut rc, fmt);
+    let mut sz = SIZE { cx: 0, cy: 0 };
+    if GetTextExtentPoint32W(hdc, t.ptr(), t.len as i32, &mut sz) == 0 {
+        return;
+    }
+    let tx = if right { x + w - sz.cx } else { x };
+    let ty = y + (h - sz.cy) / 2;
+    ExtTextOutW(
+        hdc,
+        tx,
+        ty,
+        0,
+        ptr::null(),
+        t.ptr(),
+        t.len as u32,
+        ptr::null(),
+    );
 }
 
 

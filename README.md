@@ -2,9 +2,9 @@
 
 复刻 MangoDisk「任务栏资源条」外观的 Windows 11 小挂件：两行文字实时显示 **CPU / 内存 / 系统盘 / 上下行网速**，单文件、免安装、不要管理员、不写驱动、不联网。
 
-> **下载**：[SysMonChipLite v1.2](https://github.com/zhaoxiagongsi001/sysmon-chip/releases/tag/v1.2)　·　源码：<https://github.com/zhaoxiagongsi001/sysmon-chip>　·　MIT
+> **下载**：[SysMonChipLite v1.3](https://github.com/zhaoxiagongsi001/sysmon-chip/releases/tag/v1.3)　·　源码：<https://github.com/zhaoxiagongsi001/sysmon-chip>　·　MIT
 
-- 发布物（推荐）：`发布/SysMonChipLite.exe`（**50.5 KB**，PE 版本 **1.2.0.0**，no_std 极限轻量版，功能与界面同 std 版逐像素一致）
+- 发布物（推荐）：`发布/SysMonChipLite.exe`（**38.5 KB**，PE 版本 **1.3.0.0**，no_std 极限轻量版，功能与界面同 std 版逐像素一致）
 - 发布物（std 版，保底）：`发布/SysMonChip.exe`（326.5 KB，v0.3.0.0）；两版共用同一份配置与单实例互斥，可随时互换对照
 - **v2.0 Lite（2026-11-10）**：抽出 no_std 共享核心 `chip_core`，外壳 `app_ultra` 不链接 Rust std（文件/注册表/命令行走 Win32）→ 体积 **327 KB → 56 KB（−83%）**，启动更快，功能/界面/稳定性与 std 版持平
 - **v1.1（2026-11-10）**：字号 +8%（标签 9.75 pt / 数值 10 pt）、面板 194→198 逻辑像素并重排列位、网速宽度自适应、桌面模式贴任务栏上沿+屏幕右缘、新增 `--demo`
@@ -410,3 +410,31 @@ v1.1 的 OCR 委派评审留了 8 条 Low（V1–V8），本版逐条处理：
 
 单测 14 → **16 项**（新增 `last_on_follows_the_rightmost_enabled_item`、`arrow_fits_only_when_it_stays_left_of_the_text`）；
 `tools/verify.py layout|padding|region|tray` 全绿：宽度 491 / 317 / 221 物理 px（218 / 141 / 98 逻辑），右下角右缘锁 3456，`GetWindowRgn` type=3，托盘隐藏 5.5 ms / 显示 5.6 ms。
+
+## v1.3 减重与降耗（2026-11-14，PE 1.3.0.0）
+
+老板拍板方案 A（全做），目标「体积与运行占用各降 20%」。实测结果：
+
+| 指标 | v1.2 | v1.3 | 变化 |
+| --- | --- | --- | --- |
+| 体积 | 52 224 B | **39 424 B** | **−24.5%** |
+| 工作集 | 1.72–1.78 MB | 1.71–1.72 MB | 约 −1~3%（在噪声内） |
+| CPU | 1.2–1.7 ms/s | 1.2–1.6 ms/s | 差异小于测量分辨率（见下） |
+| 冷启动 | 24 ms | 24–31 ms | 同量级 |
+
+做法四条：
+
+1. **剥掉 mingw CRT**（收益最大，−10 KB）：rustc 的 windows-gnu 后端会把 `crt2.o` 与 `-lmsvcrt -lmingw32` 硬写进链接命令行，常规开关删不掉。改用 `-C linker-flavor=ld` + `tools/ld_wrap.py` 在调用前截掉这些对象与库，入口换成 `chip_entry`（`main.rs`），并自带 `memcpy/memmove/memset/memcmp`。结果：`.text` 31 232 → 25 088，`msvcrt.dll` 整条导入消失，重复的 `KERNEL32.dll` 也没了。
+2. **图标瘦身**：4 602 → 2 477 B（按 ICO 目录表只保留原有 24×24 / 32×32 两帧，丢掉 48×48）。
+3. **文本绘制**：`DrawTextW` 换成 `ExtTextOutW`（量宽后一次出字），排版逐像素核对一致。
+4. **构建可复现**：新增 `tools/build.ps1` —— 默认出剥 CRT 版，`-Plain` 出保留 CRT 的 51 KB 兼容版；`tools/ldw.cmd` 是给 rustc 的链接器入口。
+
+测量口径（诚实说明）：
+
+- `GetProcessTimes` 的时间精度是 **15.625 ms**；90 秒窗口下两版读数都落在 **1.2–1.7 ms/s**（单核 0.12–0.17%），**差异小于分辨率**，不能宣称 CPU 百分比提升。
+- 研究报告里早先的「−73% CPU」是 25 秒短窗读数（只有 4 个计时刻度），已在该报告里订正。
+- 能直接测到的：体积 −24.5%、冷启动 24–31 ms、WS ≈1.7 MB、句柄 137 / GDI 11 / USER 7 不变。
+
+回归：`tools/verify.py layout|padding|region|tray` 全 PASS（宽度 491 / 317 / 221 物理 px、右下角右缘锁 3456、`GetWindowRgn` type=3、托盘隐藏/显示 <6 ms）；`cargo test` 16 项全绿；截图与 v1.2 逐像素无差异。
+
+放弃项：S2（删 `.pdata/.xdata`）产物被 Windows 判为「不是有效的 Win32 应用程序」，省 2.5 KB 不值当；目标已由 39 424 B 达成。
