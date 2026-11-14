@@ -1,0 +1,102 @@
+{
+  "meta": {
+    "duration_s": 600.0,
+    "samples": 300,
+    "pid": 28548,
+    "rect": [
+      9,
+      2065,
+      455,
+      2146
+    ],
+    "alive_end": true,
+    "quit_code": 0,
+    "pids_after": {
+      "lite": [],
+      "std": []
+    },
+    "shots": [
+      "lite-verify-perf-start.png",
+      "lite-verify-perf-end.png"
+    ]
+  },
+  "metrics": {
+    "ws_mb": {
+      "min": 1.0547,
+      "avg": 1.5208,
+      "max": 5.7539,
+      "slope_per_hour": 0.5554
+    },
+    "priv_mb": {
+      "min": 1.6758,
+      "avg": 1.813,
+      "max": 1.8711,
+      "slope_per_hour": 0.9095
+    },
+    "gdi": {
+      "min": 13,
+      "avg": 13.03,
+      "max": 14,
+      "slope_per_hour": -1.2296
+    },
+    "user": {
+      "min": 5,
+      "avg": 5,
+      "max": 5,
+      "slope_per_hour": 0.0
+    },
+    "handles": {
+      "min": 137,
+      "avg": 137.0267,
+      "max": 138,
+      "slope_per_hour": -0.9136
+    }
+  },
+  "tails": {
+    "ws_mb": {
+      "first10_avg": 1.4684,
+      "last10_avg": 1.4238,
+      "delta": -0.0446
+    },
+    "priv_mb": {
+      "first10_avg": 1.7216,
+      "last10_avg": 1.8029,
+      "delta": 0.0813
+    },
+    "gdi": {
+      "first10_avg": 13.1,
+      "last10_avg": 13,
+      "delta": -0.1
+    },
+    "user": {
+      "first10_avg": 5,
+      "last10_avg": 5,
+      "delta": 0
+    },
+    "handles": {
+      "first10_avg": 137.1,
+      "last10_avg": 137,
+      "delta": -0.1
+    }
+  },
+  "cpu": {
+    "total_cpu_s": 0.9219,
+    "wall_s": 600.0,
+    "single_core_pct": 0.1536,
+    "per_2s_pct_min": 0.1496,
+    "per_2s_pct_max": 0.7811
+  },
+  "verdict": {
+    "handles_growth": -0.9136,
+    "gdi_growth_per_hour": -1.2296,
+    "user_growth_per_hour": 0.0,
+    "handle_tail_delta": -0.1,
+    "gdi_tail_delta": -0.1,
+    "user_tail_delta": 0,
+    "ws_slope_mb_per_hour": 0.5554,
+    "no_leak": true,
+    "alive_all": true,
+    "quit_ok": true,
+    "no_residual": true
+  }
+}

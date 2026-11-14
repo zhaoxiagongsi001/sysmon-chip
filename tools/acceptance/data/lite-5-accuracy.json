@@ -1,0 +1,183 @@
+{
+  "cpu_mem_disk": {
+    "rounds": [
+      {
+        "round": 1,
+        "exe": "SysMonChipLite.exe",
+        "dump_cpu": 23,
+        "pdh_cpu": 16.84,
+        "pdh_err": null,
+        "diff_pp": 6.16,
+        "dump": {
+          "cpu": "23",
+          "mem": "83",
+          "disk": "67",
+          "up": "6224",
+          "down": "57837",
+          "if_seen": "1",
+          "mode": "taskbar"
+        },
+        "mem_ps": 83.99,
+        "mem_diff_pp": -0.99,
+        "disk_ps": 66.89,
+        "disk_diff_pp": 0.11
+      },
+      {
+        "round": 2,
+        "exe": "SysMonChipLite.exe",
+        "dump_cpu": 24,
+        "pdh_cpu": 23.7,
+        "pdh_err": null,
+        "diff_pp": 0.3,
+        "dump": {
+          "cpu": "24",
+          "mem": "83",
+          "disk": "67",
+          "up": "2799",
+          "down": "36145",
+          "if_seen": "1",
+          "mode": "taskbar"
+        },
+        "mem_ps": 83.99,
+        "mem_diff_pp": -0.99,
+        "disk_ps": 66.89,
+        "disk_diff_pp": 0.11
+      },
+      {
+        "round": 3,
+        "exe": "SysMonChipLite.exe",
+        "dump_cpu": 18,
+        "pdh_cpu": 18.47,
+        "pdh_err": null,
+        "diff_pp": -0.47,
+        "dump": {
+          "cpu": "18",
+          "mem": "83",
+          "disk": "67",
+          "up": "10221",
+          "down": "116690",
+          "if_seen": "1",
+          "mode": "taskbar"
+        },
+        "mem_ps": 83.99,
+        "mem_diff_pp": -0.99,
+        "disk_ps": 66.89,
+        "disk_diff_pp": 0.11
+      },
+      {
+        "round": 4,
+        "exe": "SysMonChipLite.exe",
+        "dump_cpu": 12,
+        "pdh_cpu": 12.44,
+        "pdh_err": null,
+        "diff_pp": -0.44,
+        "dump": {
+          "cpu": "12",
+          "mem": "83",
+          "disk": "67",
+          "up": "15111",
+          "down": "121854",
+          "if_seen": "1",
+          "mode": "taskbar"
+        },
+        "mem_ps": 83.99,
+        "mem_diff_pp": -0.99,
+        "disk_ps": 66.89,
+        "disk_diff_pp": 0.11
+      },
+      {
+        "round": 9,
+        "exe": "SysMonChip.exe",
+        "dump_cpu": 16,
+        "pdh_cpu": 16.18,
+        "pdh_err": null,
+        "diff_pp": -0.18,
+        "dump": {
+          "cpu": "16",
+          "mem": "83",
+          "disk": "67",
+          "up": "7435",
+          "down": "135945",
+          "if_seen": "1",
+          "cfg_dir": "D:\\DSH\\sysmon-chip\\.appdata-test\\SysMonChip",
+          "mode": "Taskbar",
+          "theme": "Light"
+        },
+        "mem_ps": 83.99,
+        "mem_diff_pp": -0.99,
+        "disk_ps": 66.89,
+        "disk_diff_pp": 0.11
+      }
+    ],
+    "ps_mem_pct": 83.99,
+    "ps_disk_pct": 66.89,
+    "ps_cmd": {
+      "mem_available_mbytes": "2587",
+      "disk": "66.89"
+    },
+    "mem_source": "PDH Available MBytes + GlobalMemoryStatusEx TotalPhys (CIM 被沙箱拒绝)"
+  },
+  "summary": {
+    "lite_cpu_rounds": 4,
+    "cpu_abs_diff_pp_max": 6.16,
+    "mem_abs_diff_pp_max": 0.99,
+    "disk_abs_diff_pp_max": 0.11
+  },
+  "net_lite": {
+    "exe": "SysMonChipLite.exe",
+    "pdh_error": null,
+    "pairs": [
+      {
+        "i": 1,
+        "exit": 0,
+        "dump_down_Bps": 330123,
+        "dump_up_Bps": 27725,
+        "if_seen": "1",
+        "pdh_rx_Bps": 329540,
+        "pdh_instances": [
+          [
+            "Intel[R] Wi-Fi 6 AX201 160MHz",
+            329540
+          ]
+        ],
+        "ratio": 1.002
+      },
+      {
+        "i": 2,
+        "exit": 0,
+        "dump_down_Bps": 584019,
+        "dump_up_Bps": 32488,
+        "if_seen": "1",
+        "pdh_rx_Bps": 600437,
+        "pdh_instances": [
+          [
+            "Intel[R] Wi-Fi 6 AX201 160MHz",
+            600437
+          ]
+        ],
+        "ratio": 0.973
+      }
+    ],
+    "ps_net": {
+      "code": 1,
+      "err": "Get-NetAdapterStatistics: 拒绝访问"
+    },
+    "downloader": {
+      "bytes": 589824,
+      "error": null,
+      "seconds": 1.61,
+      "rate_Bps": 366416
+    },
+    "ratio_min_max": [
+      0.973,
+      1.002
+    ]
+  },
+  "final_clean": {
+    "clean": true,
+    "pids": {
+      "lite": [],
+      "std": []
+    }
+  }
+}

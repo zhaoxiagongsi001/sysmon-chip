@@ -1,0 +1,305 @@
+{
+  "lite": {
+    "label": "lite",
+    "path": "D:\\DSH\\sysmon-chip\\发布\\SysMonChipLite.exe",
+    "file_bytes": 57344,
+    "file_kb": 56.0,
+    "sha256": "988a50ee930bfd181118f5e5fc31f8b409ed6ce0a0d9856a71568da4b5342892",
+    "machine": "0x8664",
+    "pe32plus": true,
+    "subsystem": 2,
+    "subsystem_name": "WINDOWS_GUI",
+    "dll_characteristics": "0x160",
+    "linker": "11266.44",
+    "size_of_image": 90112,
+    "size_of_image_kb": 88.0,
+    "sections": [
+      {
+        "name": ".text",
+        "vsize": 25616,
+        "rawsize": 26112
+      },
+      {
+        "name": ".data",
+        "vsize": 48,
+        "rawsize": 512
+      },
+      {
+        "name": ".rdata",
+        "vsize": 2800,
+        "rawsize": 3072
+      },
+      {
+        "name": ".pdata",
+        "vsize": 1212,
+        "rawsize": 1536
+      },
+      {
+        "name": ".xdata",
+        "vsize": 1212,
+        "rawsize": 1536
+      },
+      {
+        "name": ".bss",
+        "vsize": 352,
+        "rawsize": 0
+      },
+      {
+        "name": ".idata",
+        "vsize": 5052,
+        "rawsize": 5120
+      },
+      {
+        "name": ".tls",
+        "vsize": 16,
+        "rawsize": 512
+      },
+      {
+        "name": ".rsrc",
+        "vsize": 17032,
+        "rawsize": 17408
+      },
+      {
+        "name": ".reloc",
+        "vsize": 100,
+        "rawsize": 512
+      }
+    ],
+    "section_bytes": 56320,
+    "imports": [
+      {
+        "dll": "KERNEL32.dll",
+        "functions": 9
+      },
+      {
+        "dll": "msvcrt.dll",
+        "functions": 29
+      },
+      {
+        "dll": "advapi32.dll",
+        "functions": 5
+      },
+      {
+        "dll": "gdi32.dll",
+        "functions": 12
+      },
+      {
+        "dll": "iphlpapi.dll",
+        "functions": 3
+      },
+      {
+        "dll": "kernel32.dll",
+        "functions": 22
+      },
+      {
+        "dll": "shell32.dll",
+        "functions": 1
+      },
+      {
+        "dll": "user32.dll",
+        "functions": 46
+      }
+    ],
+    "import_dll_count": 8,
+    "import_func_total": 127,
+    "resource_types": {
+      "icon": 7,
+      "groupicon": 1,
+      "version": 1
+    },
+    "icon_count_extract": 1,
+    "debug_dirs": [],
+    "version_info": {
+      "file_version": "2.0.0.0",
+      "product_version": "2.0.0.0",
+      "FileVersion": "2.0.0.0",
+      "ProductVersion": "2.0.0.0",
+      "ProductName": "SysMon Chip Lite",
+      "FileDescription": "SysMon Chip Lite - no_std resource chip",
+      "CompanyName": "DSH",
+      "InternalName": "SysMonChipLite",
+      "OriginalFilename": "SysMonChipLite.exe"
+    },
+    "strings": {
+      "ascii_strings": 344,
+      "utf16_strings": 18,
+      "rust_std_path": 0,
+      "rust_panic_msg": 0,
+      "rust_backtrace": 0,
+      "rust_std_mod": 0,
+      "rust_unwrap": 0,
+      "rust_core_mod": 0,
+      "cargo_path": 0,
+      "samples": {}
+    }
+  },
+  "std": {
+    "label": "std",
+    "path": "D:\\DSH\\sysmon-chip\\发布\\SysMonChip.exe",
+    "file_bytes": 334848,
+    "file_kb": 327.0,
+    "sha256": "f33551a1fbd988b0b0d8c580791cff3d15551ad4e74c5eb7be66d3d91465bf3f",
+    "machine": "0x8664",
+    "pe32plus": true,
+    "subsystem": 2,
+    "subsystem_name": "WINDOWS_GUI",
+    "dll_characteristics": "0x160",
+    "linker": "11266.44",
+    "size_of_image": 360448,
+    "size_of_image_kb": 352.0,
+    "sections": [
+      {
+        "name": ".text",
+        "vsize": 251624,
+        "rawsize": 251904
+      },
+      {
+        "name": ".data",
+        "vsize": 2608,
+        "rawsize": 3072
+      },
+      {
+        "name": ".rdata",
+        "vsize": 34208,
+        "rawsize": 34304
+      },
+      {
+        "name": ".pdata",
+        "vsize": 5808,
+        "rawsize": 6144
+      },
+      {
+        "name": ".xdata",
+        "vsize": 11492,
+        "rawsize": 11776
+      },
+      {
+        "name": ".bss",
+        "vsize": 512,
+        "rawsize": 0
+      },
+      {
+        "name": ".idata",
+        "vsize": 7268,
+        "rawsize": 7680
+      },
+      {
+        "name": ".tls",
+        "vsize": 16,
+        "rawsize": 512
+      },
+      {
+        "name": ".rsrc",
+        "vsize": 16992,
+        "rawsize": 17408
+      },
+      {
+        "name": ".reloc",
+        "vsize": 760,
+        "rawsize": 1024
+      }
+    ],
+    "section_bytes": 333824,
+    "imports": [
+      {
+        "dll": "KERNEL32.dll",
+        "functions": 33
+      },
+      {
+        "dll": "msvcrt.dll",
+        "functions": 28
+      },
+      {
+        "dll": "ntdll.dll",
+        "functions": 2
+      },
+      {
+        "dll": "advapi32.dll",
+        "functions": 5
+      },
+      {
+        "dll": "api-ms-win-core-synch-l1-2-0.dll",
+        "functions": 3
+      },
+      {
+        "dll": "gdi32.dll",
+        "functions": 12
+      },
+      {
+        "dll": "iphlpapi.dll",
+        "functions": 3
+      },
+      {
+        "dll": "kernel32.dll",
+        "functions": 45
+      },
+      {
+        "dll": "ntdll.dll",
+        "functions": 1
+      },
+      {
+        "dll": "shell32.dll",
+        "functions": 1
+      },
+      {
+        "dll": "user32.dll",
+        "functions": 46
+      }
+    ],
+    "import_dll_count": 11,
+    "import_func_total": 179,
+    "resource_types": {
+      "icon": 7,
+      "groupicon": 1,
+      "version": 1
+    },
+    "icon_count_extract": 1,
+    "debug_dirs": [],
+    "version_info": {
+      "file_version": "1.1.0.0",
+      "product_version": "1.1.0.0",
+      "FileVersion": "1.1.0.0",
+      "ProductVersion": "1.1.0.0",
+      "ProductName": "SysMon Chip",
+      "FileDescription": "SysMon Chip - Win11 resource chip",
+      "CompanyName": "DSH",
+      "InternalName": "SysMonChip",
+      "OriginalFilename": "SysMonChip.exe"
+    },
+    "strings": {
+      "ascii_strings": 1295,
+      "utf16_strings": 20,
+      "rust_std_path": 47,
+      "rust_panic_msg": 2,
+      "rust_backtrace": 13,
+      "rust_std_mod": 0,
+      "rust_unwrap": 2,
+      "rust_core_mod": 0,
+      "cargo_path": 0,
+      "samples": {
+        "rust_std_path": [
+          "alloc",
+          "alloc",
+          "alloc",
+          "core",
+          "alloc"
+        ],
+        "rust_panic_msg": [
+          "panicked at",
+          "panicked at"
+        ],
+        "rust_backtrace": [
+          "backtrace",
+          "backtrace",
+          "RUST_BACKTRACE",
+          "backtrace",
+          "backtrace"
+        ],
+        "rust_unwrap": [
+          "unwrap()",
+          "unwrap()"
+        ]
+      }
+    }
+  }
+}

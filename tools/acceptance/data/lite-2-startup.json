@@ -1,0 +1,350 @@
+{
+  "order": [
+    "lite",
+    "std"
+  ],
+  "n": 10,
+  "lite": {
+    "n": 10,
+    "runs": [
+      {
+        "i": 1,
+        "external_ms": 26.45,
+        "startup_ms": 32.0,
+        "dpi": 216,
+        "w": 446,
+        "h": 81,
+        "pid": 6644,
+        "quit_code": 0,
+        "window_gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        }
+      },
+      {
+        "i": 2,
+        "external_ms": 26.51,
+        "startup_ms": 32.0,
+        "dpi": 216,
+        "w": 446,
+        "h": 81,
+        "pid": 19592,
+        "quit_code": 0,
+        "window_gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        }
+      },
+      {
+        "i": 3,
+        "external_ms": 34.73,
+        "startup_ms": 35.0,
+        "dpi": 216,
+        "w": 446,
+        "h": 81,
+        "pid": 20120,
+        "quit_code": 0,
+        "window_gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        }
+      },
+      {
+        "i": 4,
+        "external_ms": 31.61,
+        "startup_ms": 32.0,
+        "dpi": 216,
+        "w": 446,
+        "h": 81,
+        "pid": 19164,
+        "quit_code": 0,
+        "window_gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        }
+      },
+      {
+        "i": 5,
+        "external_ms": 38.19,
+        "startup_ms": 36.0,
+        "dpi": 216,
+        "w": 446,
+        "h": 81,
+        "pid": 26684,
+        "quit_code": 0,
+        "window_gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        }
+      },
+      {
+        "i": 6,
+        "external_ms": 33.33,
+        "startup_ms": 34.0,
+        "dpi": 216,
+        "w": 446,
+        "h": 81,
+        "pid": 16400,
+        "quit_code": 0,
+        "window_gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        }
+      },
+      {
+        "i": 7,
+        "external_ms": 29.59,
+        "startup_ms": 25.0,
+        "dpi": 216,
+        "w": 446,
+        "h": 81,
+        "pid": 23680,
+        "quit_code": 0,
+        "window_gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        }
+      },
+      {
+        "i": 8,
+        "external_ms": 31.33,
+        "startup_ms": 33.0,
+        "dpi": 216,
+        "w": 446,
+        "h": 81,
+        "pid": 7596,
+        "quit_code": 0,
+        "window_gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        }
+      },
+      {
+        "i": 9,
+        "external_ms": 34.12,
+        "startup_ms": 39.0,
+        "dpi": 216,
+        "w": 446,
+        "h": 81,
+        "pid": 27376,
+        "quit_code": 0,
+        "window_gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        }
+      },
+      {
+        "i": 10,
+        "external_ms": 38.13,
+        "startup_ms": 41.0,
+        "dpi": 216,
+        "w": 446,
+        "h": 81,
+        "pid": 5556,
+        "quit_code": 0,
+        "window_gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        }
+      }
+    ],
+    "external": {
+      "min": 26.45,
+      "p50": 32.47,
+      "max": 38.19,
+      "mean": 32.4
+    },
+    "selftrace": {
+      "min": 25.0,
+      "p50": 33.5,
+      "max": 41.0,
+      "mean": 33.9
+    },
+    "failures": []
+  },
+  "std": {
+    "n": 10,
+    "runs": [
+      {
+        "i": 1,
+        "external_ms": 31.87,
+        "startup_ms": 32.75,
+        "dpi": 216,
+        "w": 446,
+        "h": 81,
+        "pid": 26628,
+        "quit_code": 0,
+        "window_gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        }
+      },
+      {
+        "i": 2,
+        "external_ms": 33.53,
+        "startup_ms": 34.98,
+        "dpi": 216,
+        "w": 446,
+        "h": 81,
+        "pid": 16096,
+        "quit_code": 0,
+        "window_gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        }
+      },
+      {
+        "i": 3,
+        "external_ms": 25.82,
+        "startup_ms": 30.74,
+        "dpi": 216,
+        "w": 446,
+        "h": 81,
+        "pid": 7912,
+        "quit_code": 0,
+        "window_gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        }
+      },
+      {
+        "i": 4,
+        "external_ms": 30.08,
+        "startup_ms": 31.82,
+        "dpi": 216,
+        "w": 446,
+        "h": 81,
+        "pid": 1308,
+        "quit_code": 0,
+        "window_gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        }
+      },
+      {
+        "i": 5,
+        "external_ms": 41.09,
+        "startup_ms": 48.37,
+        "dpi": 216,
+        "w": 446,
+        "h": 81,
+        "pid": 14144,
+        "quit_code": 0,
+        "window_gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        }
+      },
+      {
+        "i": 6,
+        "external_ms": 36.19,
+        "startup_ms": 35.34,
+        "dpi": 216,
+        "w": 446,
+        "h": 81,
+        "pid": 2152,
+        "quit_code": 0,
+        "window_gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        }
+      },
+      {
+        "i": 7,
+        "external_ms": 48.13,
+        "startup_ms": 49.22,
+        "dpi": 216,
+        "w": 446,
+        "h": 81,
+        "pid": 5932,
+        "quit_code": 0,
+        "window_gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        }
+      },
+      {
+        "i": 8,
+        "external_ms": 51.28,
+        "startup_ms": 57.24,
+        "dpi": 216,
+        "w": 446,
+        "h": 81,
+        "pid": 28336,
+        "quit_code": 0,
+        "window_gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        }
+      },
+      {
+        "i": 9,
+        "external_ms": 36.9,
+        "startup_ms": 34.69,
+        "dpi": 216,
+        "w": 446,
+        "h": 81,
+        "pid": 3876,
+        "quit_code": 0,
+        "window_gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        }
+      },
+      {
+        "i": 10,
+        "external_ms": 36.02,
+        "startup_ms": 40.04,
+        "dpi": 216,
+        "w": 446,
+        "h": 81,
+        "pid": 7108,
+        "quit_code": 0,
+        "window_gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        }
+      }
+    ],
+    "external": {
+      "min": 25.82,
+      "p50": 36.11,
+      "max": 51.28,
+      "mean": 37.09
+    },
+    "selftrace": {
+      "min": 30.74,
+      "p50": 35.16,
+      "max": 57.24,
+      "mean": 39.52
+    },
+    "failures": []
+  },
+  "final_clean": {
+    "clean": true,
+    "pids": {
+      "lite": [],
+      "std": []
+    }
+  }
+}

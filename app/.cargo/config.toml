@@ -1,0 +1,2 @@
+[build]
+rustflags = ["-C", "link-arg=-Wl,--gc-sections", "-C", "link-arg=-Wl,--strip-all"]

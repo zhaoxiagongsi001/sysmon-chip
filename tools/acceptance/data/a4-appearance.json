@@ -1,0 +1,594 @@
+{
+  "cases": [
+    {
+      "case": "desktop-light",
+      "config": {
+        "mode": "desktop",
+        "theme": "light"
+      },
+      "rect": [
+        3001,
+        1953,
+        3438,
+        2034
+      ],
+      "expected": [
+        3001,
+        1953
+      ],
+      "expected_detail": {
+        "work_area": [
+          0,
+          0,
+          3456,
+          2052
+        ],
+        "margin_phys": 18
+      },
+      "delta": [
+        0,
+        0
+      ],
+      "size": [
+        437,
+        81
+      ],
+      "visible": true,
+      "style": "0x94000000",
+      "exstyle": "0x8000088",
+      "topmost": true,
+      "toolwindow": true,
+      "bg_dominant": [
+        243,
+        243,
+        243
+      ],
+      "shot": "verify-desktop-light.png",
+      "quit_exit": 0
+    },
+    {
+      "case": "desktop-dark",
+      "config": {
+        "mode": "desktop",
+        "theme": "dark"
+      },
+      "rect": [
+        3001,
+        1953,
+        3438,
+        2034
+      ],
+      "expected": [
+        3001,
+        1953
+      ],
+      "expected_detail": {
+        "work_area": [
+          0,
+          0,
+          3456,
+          2052
+        ],
+        "margin_phys": 18
+      },
+      "delta": [
+        0,
+        0
+      ],
+      "size": [
+        437,
+        81
+      ],
+      "visible": true,
+      "style": "0x94000000",
+      "exstyle": "0x8000088",
+      "topmost": true,
+      "toolwindow": true,
+      "bg_dominant": [
+        32,
+        32,
+        32
+      ],
+      "shot": "verify-desktop-dark.png",
+      "quit_exit": 0
+    },
+    {
+      "case": "taskbar-light",
+      "config": {
+        "mode": "taskbar",
+        "theme": "light"
+      },
+      "rect": [
+        9,
+        2065,
+        446,
+        2146
+      ],
+      "expected": [
+        9,
+        2065
+      ],
+      "expected_detail": {
+        "taskbar": [
+          0,
+          2052,
+          3456,
+          2160
+        ],
+        "pad": 9,
+        "bar_h": 108
+      },
+      "delta": [
+        0,
+        0
+      ],
+      "size": [
+        437,
+        81
+      ],
+      "visible": true,
+      "style": "0x94000000",
+      "exstyle": "0x8000088",
+      "topmost": true,
+      "toolwindow": true,
+      "bg_dominant": [
+        243,
+        243,
+        243
+      ],
+      "shot": "verify-taskbar-light.png",
+      "quit_exit": 0
+    },
+    {
+      "case": "taskbar-dark",
+      "config": {
+        "mode": "taskbar",
+        "theme": "dark"
+      },
+      "rect": [
+        9,
+        2065,
+        446,
+        2146
+      ],
+      "expected": [
+        9,
+        2065
+      ],
+      "expected_detail": {
+        "taskbar": [
+          0,
+          2052,
+          3456,
+          2160
+        ],
+        "pad": 9,
+        "bar_h": 108
+      },
+      "delta": [
+        0,
+        0
+      ],
+      "size": [
+        437,
+        81
+      ],
+      "visible": true,
+      "style": "0x94000000",
+      "exstyle": "0x8000088",
+      "topmost": true,
+      "toolwindow": true,
+      "bg_dominant": [
+        32,
+        32,
+        32
+      ],
+      "shot": "verify-taskbar-dark.png",
+      "quit_exit": 0
+    },
+    {
+      "case": "free-light",
+      "config": {
+        "mode": "free",
+        "x": 300,
+        "y": 400,
+        "theme": "light"
+      },
+      "rect": [
+        300,
+        400,
+        737,
+        481
+      ],
+      "expected": [
+        300,
+        400
+      ],
+      "expected_detail": {
+        "configured": [
+          300,
+          400
+        ]
+      },
+      "delta": [
+        0,
+        0
+      ],
+      "size": [
+        437,
+        81
+      ],
+      "visible": true,
+      "style": "0x94000000",
+      "exstyle": "0x8000088",
+      "topmost": true,
+      "toolwindow": true,
+      "bg_dominant": [
+        243,
+        243,
+        243
+      ],
+      "shot": "verify-free-light.png",
+      "quit_exit": 0
+    },
+    {
+      "case": "free-dark",
+      "config": {
+        "mode": "free",
+        "x": 300,
+        "y": 400,
+        "theme": "dark"
+      },
+      "rect": [
+        300,
+        400,
+        737,
+        481
+      ],
+      "expected": [
+        300,
+        400
+      ],
+      "expected_detail": {
+        "configured": [
+          300,
+          400
+        ]
+      },
+      "delta": [
+        0,
+        0
+      ],
+      "size": [
+        437,
+        81
+      ],
+      "visible": true,
+      "style": "0x94000000",
+      "exstyle": "0x8000088",
+      "topmost": true,
+      "toolwindow": true,
+      "bg_dominant": [
+        32,
+        32,
+        32
+      ],
+      "shot": "verify-free-dark.png",
+      "quit_exit": 0
+    }
+  ],
+  "expected": {},
+  "dpi_scale": 1.0,
+  "screen_physical": [
+    3456,
+    2160
+  ],
+  "screenshot_size": [
+    3456,
+    2160
+  ],
+  "compare": {
+    "mae_all": 26.71,
+    "mae_channels": [
+      27.4,
+      25.08,
+      27.64
+    ],
+    "px_gt16": 25.78,
+    "mae_top40": 25.03,
+    "bg_ref": [
+      243,
+      243,
+      243
+    ],
+    "bg_ours": [
+      243,
+      243,
+      243
+    ],
+    "bg_diff": [
+      0,
+      0,
+      0
+    ],
+    "ink_bbox_ref": {
+      "x0": 15,
+      "y0": 10,
+      "x1": 414,
+      "y1": 74
+    },
+    "ink_bbox_ours": {
+      "x0": 17,
+      "y0": 11,
+      "x1": 413,
+      "y1": 72
+    },
+    "ink_px_ref": 6517,
+    "ink_px_ours": 4961,
+    "ink_iou": 0.3834,
+    "mae_background_only": 2.07,
+    "bg_ratio_ref": 79.96,
+    "bg_ratio_ours": 84.36,
+    "rows_ref": [
+      [
+        10,
+        34
+      ],
+      [
+        49,
+        74
+      ]
+    ],
+    "rows_ours": [
+      [
+        11,
+        32
+      ],
+      [
+        49,
+        72
+      ]
+    ],
+    "cols_top_ref": [
+      [
+        15,
+        67
+      ],
+      [
+        96,
+        159
+      ],
+      [
+        184,
+        241
+      ],
+      [
+        263,
+        272
+      ],
+      [
+        316,
+        352
+      ],
+      [
+        359,
+        414
+      ]
+    ],
+    "cols_top_ours": [
+      [
+        17,
+        64
+      ],
+      [
+        99,
+        156
+      ],
+      [
+        187,
+        240
+      ],
+      [
+        265,
+        272
+      ],
+      [
+        304,
+        352
+      ],
+      [
+        363,
+        413
+      ]
+    ],
+    "col_pairs": [
+      {
+        "i": 0,
+        "ref": [
+          15,
+          67
+        ],
+        "ours": [
+          17,
+          64
+        ],
+        "dx0": 2,
+        "dx1": -3,
+        "dw": -5
+      },
+      {
+        "i": 1,
+        "ref": [
+          96,
+          159
+        ],
+        "ours": [
+          99,
+          156
+        ],
+        "dx0": 3,
+        "dx1": -3,
+        "dw": -6
+      },
+      {
+        "i": 2,
+        "ref": [
+          184,
+          241
+        ],
+        "ours": [
+          187,
+          240
+        ],
+        "dx0": 3,
+        "dx1": -1,
+        "dw": -4
+      },
+      {
+        "i": 3,
+        "ref": [
+          263,
+          272
+        ],
+        "ours": [
+          265,
+          272
+        ],
+        "dx0": 2,
+        "dx1": 0,
+        "dw": -2
+      },
+      {
+        "i": 4,
+        "ref": [
+          316,
+          352
+        ],
+        "ours": [
+          304,
+          352
+        ],
+        "dx0": -12,
+        "dx1": 0,
+        "dw": 12
+      },
+      {
+        "i": 5,
+        "ref": [
+          359,
+          414
+        ],
+        "ours": [
+          363,
+          413
+        ],
+        "dx0": 4,
+        "dx1": -1,
+        "dw": -5
+      }
+    ],
+    "col_alignment_max_abs_dx": 12,
+    "col_alignment_mean_abs_dx": 4.33,
+    "col_width_ratio_mean": 0.96,
+    "row_pairs": [
+      {
+        "i": 0,
+        "ref": [
+          10,
+          34
+        ],
+        "ours": [
+          11,
+          32
+        ],
+        "dy0": 1,
+        "dy1": -2,
+        "dh": -3
+      },
+      {
+        "i": 1,
+        "ref": [
+          49,
+          74
+        ],
+        "ours": [
+          49,
+          72
+        ],
+        "dy0": 0,
+        "dy1": -2,
+        "dh": -2
+      }
+    ],
+    "row_alignment_max_abs_dy": 1,
+    "row_height_ratio_mean": 0.897,
+    "design_palette_nearest": {
+      "label": {
+        "design": [
+          0,
+          0,
+          0
+        ],
+        "dist_ref": 0,
+        "dist_ours": 0
+      },
+      "up": {
+        "design": [
+          253,
+          80,
+          93
+        ],
+        "dist_ref": 8,
+        "dist_ours": 0
+      },
+      "down": {
+        "design": [
+          22,
+          139,
+          253
+        ],
+        "dist_ref": 10,
+        "dist_ours": 0
+      },
+      "green": {
+        "design": [
+          24,
+          120,
+          62
+        ],
+        "dist_ref": 2,
+        "dist_ours": 0
+      },
+      "amber": {
+        "design": [
+          166,
+          77,
+          0
+        ],
+        "dist_ref": 6,
+        "dist_ours": 0
+      },
+      "red": {
+        "design": [
+          200,
+          30,
+          30
+        ],
+        "dist_ref": 37,
+        "dist_ours": 47
+      },
+      "bg": {
+        "design": [
+          243,
+          243,
+          243
+        ],
+        "dist_ref": 0,
+        "dist_ours": 0
+      }
+    },
+    "side_by_side": "verify-compare-side-by-side.png"
+  },
+  "montage": "verify-modes-montage.png",
+  "residual_pids": []
+}

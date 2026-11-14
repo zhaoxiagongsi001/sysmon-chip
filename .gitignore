@@ -1,0 +1,4 @@
+target/
+发布/*.pdb
+tools/__pycache__/
+*.tmp

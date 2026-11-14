@@ -1,0 +1,74 @@
+{
+  "ts": "2026-11-10T19:57:16",
+  "hwnd": 1508854,
+  "pid": 13928,
+  "rect": [
+    9,
+    2065,
+    446,
+    2146
+  ],
+  "icon_rect_uid1": {
+    "hr": "0x80004005",
+    "hr_signed": -2147467259,
+    "ok": false,
+    "file_not_found": false,
+    "rect": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "icon_rect_uid0": {
+    "hr": "0x80004005",
+    "hr_signed": -2147467259,
+    "ok": false,
+    "file_not_found": false,
+    "rect": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "tray_running": {
+    "path": "verify-tray-running-icons.png",
+    "region": [
+      2556,
+      2052,
+      3456,
+      2160
+    ]
+  },
+  "uia": {
+    "stdout": "UIA: taskbar tree has no SysMon-named element",
+    "stderr": "",
+    "rc": 0
+  },
+  "quit": {
+    "exit_code": 0,
+    "pids": []
+  },
+  "icon_rect_after_quit": {
+    "hr": "0x80004005",
+    "hr_signed": -2147467259,
+    "ok": false,
+    "file_not_found": false,
+    "rect": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "tray_after_quit": {
+    "path": "verify-tray-after-quit.png",
+    "region": [
+      2556,
+      2052,
+      3456,
+      2160
+    ]
+  }
+}

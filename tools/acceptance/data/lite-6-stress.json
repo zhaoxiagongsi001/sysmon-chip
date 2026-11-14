@@ -1,0 +1,399 @@
+{
+  "cycles": {
+    "n": 15,
+    "ok": 15,
+    "fail": [],
+    "runs": [
+      {
+        "tag": "r1-taskbar-light",
+        "visible_ms": 28.71,
+        "window": true,
+        "alive": true,
+        "quit_code": 0,
+        "gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        },
+        "ok": true
+      },
+      {
+        "tag": "r1-desktop-light",
+        "visible_ms": 20.74,
+        "window": true,
+        "alive": true,
+        "quit_code": 0,
+        "gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        },
+        "ok": true
+      },
+      {
+        "tag": "r1-free-light",
+        "visible_ms": 22.28,
+        "window": true,
+        "alive": true,
+        "quit_code": 0,
+        "gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        },
+        "ok": true
+      },
+      {
+        "tag": "r2-taskbar-dark",
+        "visible_ms": 24.87,
+        "window": true,
+        "alive": true,
+        "quit_code": 0,
+        "gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        },
+        "ok": true
+      },
+      {
+        "tag": "r2-desktop-dark",
+        "visible_ms": 234.5,
+        "window": true,
+        "alive": true,
+        "quit_code": 0,
+        "gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        },
+        "ok": true
+      },
+      {
+        "tag": "r2-free-dark",
+        "visible_ms": 52.89,
+        "window": true,
+        "alive": true,
+        "quit_code": 0,
+        "gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        },
+        "ok": true
+      },
+      {
+        "tag": "r3-taskbar-auto",
+        "visible_ms": 41.54,
+        "window": true,
+        "alive": true,
+        "quit_code": 0,
+        "gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        },
+        "ok": true
+      },
+      {
+        "tag": "r3-desktop-auto",
+        "visible_ms": 37.22,
+        "window": true,
+        "alive": true,
+        "quit_code": 0,
+        "gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        },
+        "ok": true
+      },
+      {
+        "tag": "r3-free-auto",
+        "visible_ms": 31.88,
+        "window": true,
+        "alive": true,
+        "quit_code": 0,
+        "gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        },
+        "ok": true
+      },
+      {
+        "tag": "r4-taskbar-light",
+        "visible_ms": 21.09,
+        "window": true,
+        "alive": true,
+        "quit_code": 0,
+        "gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        },
+        "ok": true
+      },
+      {
+        "tag": "r4-desktop-light",
+        "visible_ms": 21.91,
+        "window": true,
+        "alive": true,
+        "quit_code": 0,
+        "gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        },
+        "ok": true
+      },
+      {
+        "tag": "r4-free-light",
+        "visible_ms": 153.12,
+        "window": true,
+        "alive": true,
+        "quit_code": 0,
+        "gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        },
+        "ok": true
+      },
+      {
+        "tag": "r5-taskbar-dark",
+        "visible_ms": 63.79,
+        "window": true,
+        "alive": true,
+        "quit_code": 0,
+        "gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        },
+        "ok": true
+      },
+      {
+        "tag": "r5-desktop-dark",
+        "visible_ms": 32.49,
+        "window": true,
+        "alive": true,
+        "quit_code": 0,
+        "gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        },
+        "ok": true
+      },
+      {
+        "tag": "r5-free-dark",
+        "visible_ms": 23.1,
+        "window": true,
+        "alive": true,
+        "quit_code": 0,
+        "gone": true,
+        "pids_after": {
+          "lite": [],
+          "std": []
+        },
+        "ok": true
+      }
+    ]
+  },
+  "rapid_restart": {
+    "n": 10,
+    "ok": 10,
+    "fail": [],
+    "runs": [
+      {
+        "i": 1,
+        "quit_code": 0,
+        "gone": true,
+        "pids": {
+          "lite": [],
+          "std": []
+        },
+        "ok": true
+      },
+      {
+        "i": 2,
+        "quit_code": 0,
+        "gone": true,
+        "pids": {
+          "lite": [],
+          "std": []
+        },
+        "ok": true
+      },
+      {
+        "i": 3,
+        "quit_code": 0,
+        "gone": true,
+        "pids": {
+          "lite": [],
+          "std": []
+        },
+        "ok": true
+      },
+      {
+        "i": 4,
+        "quit_code": 0,
+        "gone": true,
+        "pids": {
+          "lite": [],
+          "std": []
+        },
+        "ok": true
+      },
+      {
+        "i": 5,
+        "quit_code": 0,
+        "gone": true,
+        "pids": {
+          "lite": [],
+          "std": []
+        },
+        "ok": true
+      },
+      {
+        "i": 6,
+        "quit_code": 0,
+        "gone": true,
+        "pids": {
+          "lite": [],
+          "std": []
+        },
+        "ok": true
+      },
+      {
+        "i": 7,
+        "quit_code": 0,
+        "gone": true,
+        "pids": {
+          "lite": [],
+          "std": []
+        },
+        "ok": true
+      },
+      {
+        "i": 8,
+        "quit_code": 0,
+        "gone": true,
+        "pids": {
+          "lite": [],
+          "std": []
+        },
+        "ok": true
+      },
+      {
+        "i": 9,
+        "quit_code": 0,
+        "gone": true,
+        "pids": {
+          "lite": [],
+          "std": []
+        },
+        "ok": true
+      },
+      {
+        "i": 10,
+        "quit_code": 0,
+        "gone": true,
+        "pids": {
+          "lite": [],
+          "std": []
+        },
+        "ok": true
+      }
+    ]
+  },
+  "concurrent_launch": {
+    "rounds": [
+      {
+        "round": 1,
+        "pids_while": [
+          1928
+        ],
+        "pids_final": {
+          "lite": [
+            1928
+          ],
+          "std": []
+        },
+        "windows": 1,
+        "exit_codes": [
+          null,
+          0,
+          0,
+          0,
+          0
+        ],
+        "ok": true
+      },
+      {
+        "round": 2,
+        "pids_while": [
+          2296
+        ],
+        "pids_final": {
+          "lite": [
+            2296
+          ],
+          "std": []
+        },
+        "windows": 1,
+        "exit_codes": [
+          null,
+          0,
+          0,
+          0,
+          0
+        ],
+        "ok": true
+      },
+      {
+        "round": 3,
+        "pids_while": [
+          28020
+        ],
+        "pids_final": {
+          "lite": [
+            28020
+          ],
+          "std": []
+        },
+        "windows": 1,
+        "exit_codes": [
+          null,
+          0,
+          0,
+          0,
+          0
+        ],
+        "ok": true
+      }
+    ],
+    "ok": 3
+  },
+  "demo_repeat": {
+    "n": 10,
+    "ok": 10,
+    "fail": []
+  },
+  "final": {
+    "window": false,
+    "pids": {
+      "lite": [],
+      "std": []
+    },
+    "clean": true
+  },
+  "summary": {
+    "cycles_ok": true,
+    "rapid_ok": true,
+    "storm_ok": true,
+    "demo_ok": true,
+    "no_residual": true
+  }
+}

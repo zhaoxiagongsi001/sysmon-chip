@@ -1,0 +1,198 @@
+{
+  "ts": "2026-11-10T19:54:11",
+  "window": {
+    "info": {
+      "hwnd": 2360824,
+      "pid": 5392,
+      "visible": true,
+      "rect": [
+        3001,
+        1953,
+        3438,
+        2034
+      ],
+      "style": 2483027968,
+      "exstyle": 134217864
+    },
+    "style_popup": true,
+    "ex_toolwindow": true,
+    "ex_topmost": true,
+    "ex_noactivate": true,
+    "rect": [
+      3001,
+      1953,
+      3438,
+      2034
+    ]
+  },
+  "tray": {
+    "registry": {
+      "iconstreams_found": false,
+      "error": null,
+      "IconStreams": {
+        "bytes": 16420,
+        "found": false
+      },
+      "PastIconsStream": {
+        "bytes": 175510,
+        "found": false
+      }
+    },
+    "shots": {
+      "taskbar": "verify-tray-taskbar-running.png",
+      "tray_right_1000px": "verify-tray-area-running.png",
+      "tray_right_1000px_2x": "verify-tray-area-running-2x.png"
+    }
+  },
+  "single_instance": {
+    "second_exit_code": 0,
+    "second_exit_s": 0.012,
+    "pids_after": [
+      5392
+    ],
+    "window_same": true,
+    "status": "pass"
+  },
+  "quit": {
+    "quit_exit_code": 0,
+    "app_exit_code": 0,
+    "window_after": false,
+    "pids_after": [],
+    "status": "pass"
+  },
+  "quit_no_instance": {
+    "exit_code": 0,
+    "status": "pass"
+  },
+  "persist_config_load": {
+    "dump1": {
+      "mode": "Desktop",
+      "theme": "Dark"
+    },
+    "dump2": {
+      "mode": "Desktop",
+      "theme": "Dark"
+    },
+    "bg1": [
+      32,
+      32,
+      32
+    ],
+    "bg2": [
+      32,
+      32,
+      32
+    ],
+    "status": "pass"
+  },
+  "persist_drag_save": {
+    "rect_before_drag": [
+      3001,
+      1953,
+      3438,
+      2034
+    ],
+    "config_after_drag": {
+      "mode": "free",
+      "x": "3001",
+      "y": "1953",
+      "interval": "1000",
+      "cpu": "1",
+      "mem": "1",
+      "disk": "1",
+      "net": "1",
+      "theme": "dark",
+      "locked": "0",
+      "hide_fs": "1",
+      "autostart": "0"
+    },
+    "rect_after_restart": [
+      3001,
+      1953,
+      3438,
+      2034
+    ],
+    "expect_xy_from_config": [
+      3001,
+      1953
+    ],
+    "dump": {
+      "mode": "Free",
+      "theme": "Dark"
+    },
+    "bg_after_restart": [
+      32,
+      32,
+      32
+    ],
+    "status": "pass"
+  },
+  "free_mode": {
+    "config_xy": [
+      1777,
+      999
+    ],
+    "rect": [
+      1777,
+      999,
+      2214,
+      1080
+    ],
+    "status": "pass"
+  },
+  "taskbar_created": {
+    "msg": 49253,
+    "alive": true,
+    "rect_before": [
+      9,
+      2065,
+      446,
+      2146
+    ],
+    "rect_after": [
+      9,
+      2065,
+      446,
+      2146
+    ],
+    "status": "partial",
+    "note": "模拟 explorer 广播；真 explorer 重启未做（会打断老板桌面）"
+  },
+  "fullscreen_hide_fs1": {
+    "hide_fs": 1,
+    "fullscreen_hwnd": 1443906,
+    "foreground_ok": true,
+    "widget_visible_in_fullscreen": false,
+    "reaction_s": 0.1,
+    "status": "pass",
+    "visible_after_close": true,
+    "recover_s": 0.7,
+    "quit": {
+      "quit_exit": 0,
+      "window": false,
+      "pids": []
+    }
+  },
+  "fullscreen_hide_fs0": {
+    "hide_fs": 0,
+    "fullscreen_hwnd": 1378800,
+    "foreground_ok": true,
+    "widget_visible_in_fullscreen": true,
+    "reaction_s": 0.0,
+    "status": "pass",
+    "visible_after_close": true,
+    "recover_s": 0.0,
+    "quit": {
+      "quit_exit": 0,
+      "window": false,
+      "pids": []
+    }
+  },
+  "autostart": {
+    "can_write_hkcu_run": false,
+    "error": "5: 拒绝访问。",
+    "status": "unverified",
+    "reason": "低完整性沙箱拒绝写 HKCU\\...\\Run，自启写注册表路径无法在本环境验证"
+  },
+  "final_residual_pids": []
+}

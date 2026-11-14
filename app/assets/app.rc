@@ -1,0 +1,34 @@
+1 ICON "icon.ico"
+1 24 "app.manifest"
+
+1 VERSIONINFO
+FILEVERSION 0,3,0,0
+PRODUCTVERSION 0,3,0,0
+FILEFLAGSMASK 0x3fL
+FILEFLAGS 0x0L
+FILEOS 0x40004L
+FILETYPE 0x1L
+FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "080404b0"
+        BEGIN
+            VALUE "CompanyName", "DSH"
+            VALUE "FileDescription", "SysMon Chip - Win11 resource chip"
+            VALUE "FileVersion", "0.3.0.0"
+            VALUE "InternalName", "SysMonChip"
+            VALUE "OriginalFilename", "SysMonChip.exe"
+            VALUE "ProductName", "SysMon Chip"
+            VALUE "ProductVersion", "0.3.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x804, 1200
+    END
+END
+
+
+
+

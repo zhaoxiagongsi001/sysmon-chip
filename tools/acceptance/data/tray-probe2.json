@@ -1,0 +1,49 @@
+{
+  "app_hwnd": 1575604,
+  "app_pid": 27136,
+  "probe_add": {
+    "ok": false,
+    "last_error": 5,
+    "icon": 65579
+  },
+  "probe_icon_rect": {
+    "hr": "0x80004005",
+    "ok": false,
+    "file_not_found": false,
+    "rect": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "app_icon_rect": {
+    "hr": "0x80004005",
+    "ok": false,
+    "file_not_found": false,
+    "rect": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "bogus_hwnd_rect": {
+    "hr": "0x80004005",
+    "ok": false,
+    "file_not_found": false,
+    "rect": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "screenshots": {
+    "taskbar": "verify-tray-probe-running.png"
+  },
+  "quit": {
+    "code": 0,
+    "pids": []
+  }
+}

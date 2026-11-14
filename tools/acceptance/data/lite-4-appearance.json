@@ -1,0 +1,537 @@
+{
+  "demo_light": {
+    "size": [
+      446,
+      81
+    ],
+    "pixels": 36126,
+    "diff_pixels_gt2": 0,
+    "diff_pct": 0.0,
+    "interior_x_ge": 12,
+    "diff_pixels_gt2_interior": 0,
+    "interior_pixels": 35154,
+    "interior_diff_pct": 0.0,
+    "max_channel_diff": 0,
+    "mean_abs_diff": 0.0,
+    "pixels_identical": 36126,
+    "identical_pct": 100.0,
+    "diff_bbox": null,
+    "diff_rows": [],
+    "diff_cols": [],
+    "files": {
+      "diff": "lite-verify-pixel-diff-demo-light.png",
+      "blend": "lite-verify-pixel-blend-demo-light.png",
+      "side": "lite-verify-pixel-side-demo-light.png"
+    },
+    "lite_file": "lite-verify-pixel-light-lite.png",
+    "std_file": "lite-verify-pixel-light-std.png"
+  },
+  "demo_dark": {
+    "size": [
+      446,
+      81
+    ],
+    "pixels": 36126,
+    "diff_pixels_gt2": 0,
+    "diff_pct": 0.0,
+    "interior_x_ge": 12,
+    "diff_pixels_gt2_interior": 0,
+    "interior_pixels": 35154,
+    "interior_diff_pct": 0.0,
+    "max_channel_diff": 0,
+    "mean_abs_diff": 0.0,
+    "pixels_identical": 36126,
+    "identical_pct": 100.0,
+    "diff_bbox": null,
+    "diff_rows": [],
+    "diff_cols": [],
+    "files": {
+      "diff": "lite-verify-pixel-diff-demo-dark.png",
+      "blend": "lite-verify-pixel-blend-demo-dark.png",
+      "side": "lite-verify-pixel-side-demo-dark.png"
+    },
+    "lite_file": "lite-verify-pixel-dark-lite.png",
+    "std_file": "lite-verify-pixel-dark-std.png"
+  },
+  "live": {
+    "size": [
+      446,
+      81
+    ],
+    "pixels": 36126,
+    "diff_pixels_gt2": 1244,
+    "diff_pct": 3.4435,
+    "interior_x_ge": 12,
+    "diff_pixels_gt2_interior": 1244,
+    "interior_pixels": 35154,
+    "interior_diff_pct": 3.5387,
+    "max_channel_diff": 243,
+    "mean_abs_diff": 4.2485,
+    "pixels_identical": 34882,
+    "identical_pct": 96.556,
+    "diff_bbox": [
+      17,
+      12,
+      360,
+      68
+    ],
+    "diff_rows": [
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23
+    ],
+    "diff_cols": [
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ],
+    "files": {
+      "diff": "lite-verify-pixel-diff-live.png",
+      "blend": "lite-verify-pixel-blend-live.png",
+      "side": "lite-verify-pixel-side-live.png"
+    },
+    "lite_file": "lite-verify-live-lite.png",
+    "std_file": "lite-verify-live-std.png"
+  },
+  "ref_layout": {
+    "size": [
+      437,
+      81
+    ],
+    "top_colors": [
+      [
+        [
+          243,
+          243,
+          243
+        ],
+        17715
+      ],
+      [
+        [
+          255,
+          255,
+          255
+        ],
+        941
+      ],
+      [
+        [
+          242,
+          242,
+          242
+        ],
+        447
+      ]
+    ],
+    "bg": [
+      243,
+      243,
+      243
+    ],
+    "text_bands": [
+      [
+        10,
+        34
+      ],
+      [
+        49,
+        74
+      ]
+    ],
+    "col_groups": {
+      "row1_y10-34": [
+        [
+          15,
+          67
+        ],
+        [
+          96,
+          160
+        ],
+        [
+          184,
+          241
+        ],
+        [
+          263,
+          272
+        ],
+        [
+          315,
+          352
+        ],
+        [
+          358,
+          414
+        ]
+      ],
+      "row2_y49-74": [
+        [
+          16,
+          25
+        ],
+        [
+          31,
+          70
+        ],
+        [
+          99,
+          155
+        ],
+        [
+          184,
+          240
+        ],
+        [
+          263,
+          272
+        ],
+        [
+          315,
+          351
+        ],
+        [
+          358,
+          414
+        ]
+      ]
+    },
+    "content_bbox": [
+      15,
+      10,
+      433,
+      80
+    ]
+  },
+  "our_layout": {
+    "size": [
+      446,
+      81
+    ],
+    "top_colors": [
+      [
+        [
+          243,
+          243,
+          243
+        ],
+        29964
+      ],
+      [
+        [
+          0,
+          0,
+          0
+        ],
+        1348
+      ],
+      [
+        [
+          24,
+          120,
+          62
+        ],
+        535
+      ]
+    ],
+    "bg": [
+      243,
+      243,
+      243
+    ],
+    "text_bands": [
+      [
+        12,
+        35
+      ],
+      [
+        48,
+        71
+      ]
+    ],
+    "col_groups": {
+      "row1_y12-35": [
+        [
+          17,
+          67
+        ],
+        [
+          103,
+          124
+        ],
+        [
+          129,
+          165
+        ],
+        [
+          193,
+          250
+        ],
+        [
+          277,
+          286
+        ],
+        [
+          331,
+          350
+        ],
+        [
+          355,
+          362
+        ],
+        [
+          378,
+          432
+        ]
+      ],
+      "row2_y48-71": [
+        [
+          17,
+          75
+        ],
+        [
+          102,
+          160
+        ],
+        [
+          192,
+          250
+        ],
+        [
+          277,
+          287
+        ],
+        [
+          303,
+          360
+        ],
+        [
+          372,
+          432
+        ]
+      ]
+    },
+    "content_bbox": [
+      0,
+      0,
+      432,
+      80
+    ]
+  },
+  "ref_compare": {
+    "ref_width": 437,
+    "our_width": 446,
+    "width_delta_px": 9,
+    "width_delta_pct": 2.06,
+    "bg_equal": true,
+    "rows": {
+      "row1": {
+        "ref_groups": [
+          [
+            15,
+            67
+          ],
+          [
+            96,
+            160
+          ],
+          [
+            184,
+            241
+          ],
+          [
+            263,
+            272
+          ],
+          [
+            315,
+            352
+          ],
+          [
+            358,
+            414
+          ]
+        ],
+        "our_groups": [
+          [
+            17,
+            67
+          ],
+          [
+            103,
+            124
+          ],
+          [
+            129,
+            165
+          ],
+          [
+            193,
+            250
+          ],
+          [
+            277,
+            286
+          ],
+          [
+            331,
+            350
+          ],
+          [
+            355,
+            362
+          ],
+          [
+            378,
+            432
+          ]
+        ],
+        "ref_starts": [
+          15,
+          96,
+          184,
+          263,
+          315,
+          358
+        ],
+        "our_starts": [
+          17,
+          103,
+          129,
+          193,
+          277,
+          331,
+          355,
+          378
+        ]
+      },
+      "row2": {
+        "ref_groups": [
+          [
+            16,
+            25
+          ],
+          [
+            31,
+            70
+          ],
+          [
+            99,
+            155
+          ],
+          [
+            184,
+            240
+          ],
+          [
+            263,
+            272
+          ],
+          [
+            315,
+            351
+          ],
+          [
+            358,
+            414
+          ]
+        ],
+        "our_groups": [
+          [
+            17,
+            75
+          ],
+          [
+            102,
+            160
+          ],
+          [
+            192,
+            250
+          ],
+          [
+            277,
+            287
+          ],
+          [
+            303,
+            360
+          ],
+          [
+            372,
+            432
+          ]
+        ],
+        "ref_starts": [
+          16,
+          31,
+          99,
+          184,
+          263,
+          315,
+          358
+        ],
+        "our_starts": [
+          17,
+          102,
+          192,
+          277,
+          303,
+          372
+        ]
+      }
+    }
+  },
+  "row_band_compare": {
+    "ref": [
+      [
+        10,
+        34
+      ],
+      [
+        49,
+        74
+      ]
+    ],
+    "our": [
+      [
+        12,
+        35
+      ],
+      [
+        48,
+        71
+      ]
+    ],
+    "ref_row_heights": [
+      25,
+      26
+    ],
+    "our_row_heights": [
+      24,
+      24
+    ]
+  },
+  "files": {
+    "ref_compare": "lite-verify-ref-compare.png"
+  }
+}

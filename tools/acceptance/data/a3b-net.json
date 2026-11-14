@@ -1,0 +1,214 @@
+{
+  "ts": "2026-11-10T19:50:24",
+  "instances": [
+    "Intel[R] Wi-Fi 6 AX201 160MHz"
+  ],
+  "wifi_instance": "Intel[R] Wi-Fi 6 AX201 160MHz",
+  "dumps": [
+    {
+      "i": 1,
+      "t0": 1794311409.0204325,
+      "t1": 1794311410.0424805,
+      "mtime": 1794311410.0399241,
+      "up": 14168,
+      "down": 742181,
+      "if_seen": 1,
+      "window": [
+        1794311409.04,
+        1794311410.04
+      ],
+      "tp_recv_all": 685172,
+      "tp_sent_all": 15474,
+      "per_inst_recv": {
+        "Intel[R] Wi-Fi 6 AX201 160MHz": 685172
+      },
+      "tp_recv_wifi": 685172,
+      "tp_sent_wifi": 15474,
+      "down_err_vs_wifi_pct": 8.3,
+      "up_err_vs_wifi_pct": -8.4,
+      "down_err_vs_all_pct": 8.3
+    },
+    {
+      "i": 2,
+      "t0": 1794311410.0521564,
+      "t1": 1794311411.0732148,
+      "mtime": 1794311411.0700586,
+      "up": 57110,
+      "down": 129107,
+      "if_seen": 1,
+      "window": [
+        1794311410.07,
+        1794311411.07
+      ],
+      "tp_recv_all": 149724,
+      "tp_sent_all": 63778,
+      "per_inst_recv": {
+        "Intel[R] Wi-Fi 6 AX201 160MHz": 149724
+      },
+      "tp_recv_wifi": 149724,
+      "tp_sent_wifi": 63778,
+      "down_err_vs_wifi_pct": -13.8,
+      "up_err_vs_wifi_pct": -10.5,
+      "down_err_vs_all_pct": -13.8
+    },
+    {
+      "i": 3,
+      "t0": 1794311411.0785449,
+      "t1": 1794311412.094688,
+      "mtime": 1794311412.091573,
+      "up": 13435,
+      "down": 148478,
+      "if_seen": 1,
+      "window": [
+        1794311411.092,
+        1794311412.092
+      ],
+      "tp_recv_all": 136676,
+      "tp_sent_all": 14885,
+      "per_inst_recv": {
+        "Intel[R] Wi-Fi 6 AX201 160MHz": 136676
+      },
+      "tp_recv_wifi": 136676,
+      "tp_sent_wifi": 14885,
+      "down_err_vs_wifi_pct": 8.6,
+      "up_err_vs_wifi_pct": -9.7,
+      "down_err_vs_all_pct": 8.6
+    },
+    {
+      "i": 4,
+      "t0": 1794311412.1035733,
+      "t1": 1794311413.1205428,
+      "mtime": 1794311413.1180246,
+      "up": 68049,
+      "down": 307387,
+      "if_seen": 1,
+      "window": [
+        1794311412.118,
+        1794311413.118
+      ],
+      "tp_recv_all": 273224,
+      "tp_sent_all": 59919,
+      "per_inst_recv": {
+        "Intel[R] Wi-Fi 6 AX201 160MHz": 273224
+      },
+      "tp_recv_wifi": 273224,
+      "tp_sent_wifi": 59919,
+      "down_err_vs_wifi_pct": 12.5,
+      "up_err_vs_wifi_pct": 13.6,
+      "down_err_vs_all_pct": 12.5
+    },
+    {
+      "i": 5,
+      "t0": 1794311413.1271198,
+      "t1": 1794311414.149993,
+      "mtime": 1794311414.1474676,
+      "up": 19398,
+      "down": 154026,
+      "if_seen": 1,
+      "window": [
+        1794311413.147,
+        1794311414.147
+      ],
+      "tp_recv_all": 228413,
+      "tp_sent_all": 25479,
+      "per_inst_recv": {
+        "Intel[R] Wi-Fi 6 AX201 160MHz": 228413
+      },
+      "tp_recv_wifi": 228413,
+      "tp_sent_wifi": 25479,
+      "down_err_vs_wifi_pct": -32.6,
+      "up_err_vs_wifi_pct": -23.9,
+      "down_err_vs_all_pct": -32.6
+    },
+    {
+      "i": 6,
+      "t0": 1794311414.156407,
+      "t1": 1794311415.1741235,
+      "mtime": 1794311415.1718783,
+      "up": 51423,
+      "down": 744022,
+      "if_seen": 1,
+      "window": [
+        1794311414.172,
+        1794311415.172
+      ],
+      "tp_recv_all": 659737,
+      "tp_sent_all": 49828,
+      "per_inst_recv": {
+        "Intel[R] Wi-Fi 6 AX201 160MHz": 659737
+      },
+      "tp_recv_wifi": 659737,
+      "tp_sent_wifi": 49828,
+      "down_err_vs_wifi_pct": 12.8,
+      "up_err_vs_wifi_pct": 3.2,
+      "down_err_vs_all_pct": 12.8
+    },
+    {
+      "i": 7,
+      "t0": 1794311415.1823304,
+      "t1": 1794311416.2020144,
+      "mtime": 1794311416.1978948,
+      "up": 24517,
+      "down": 67042,
+      "if_seen": 1,
+      "window": [
+        1794311415.198,
+        1794311416.198
+      ],
+      "tp_recv_all": 91902,
+      "tp_sent_all": 25963,
+      "per_inst_recv": {
+        "Intel[R] Wi-Fi 6 AX201 160MHz": 91902
+      },
+      "tp_recv_wifi": 91902,
+      "tp_sent_wifi": 25963,
+      "down_err_vs_wifi_pct": -27.1,
+      "up_err_vs_wifi_pct": -5.6,
+      "down_err_vs_all_pct": -27.1
+    },
+    {
+      "i": 8,
+      "t0": 1794311416.2060452,
+      "t1": 1794311417.2259612,
+      "mtime": 1794311417.2224348,
+      "up": 2728,
+      "down": 6621,
+      "if_seen": 1,
+      "window": [
+        1794311416.222,
+        1794311417.222
+      ],
+      "tp_recv_all": 19512,
+      "tp_sent_all": 7401,
+      "per_inst_recv": {
+        "Intel[R] Wi-Fi 6 AX201 160MHz": 19512
+      },
+      "tp_recv_wifi": 19512,
+      "tp_sent_wifi": 7401,
+      "down_err_vs_wifi_pct": -66.1,
+      "up_err_vs_wifi_pct": -63.1,
+      "down_err_vs_all_pct": -66.1
+    }
+  ],
+  "errors": {
+    "down_vs_wifi_pct": {
+      "n": 8,
+      "mean": -12.2,
+      "mae": 22.7,
+      "max_abs": 66.1
+    },
+    "up_vs_wifi_pct": {
+      "n": 8,
+      "mean": -13.1,
+      "mae": 17.2,
+      "max_abs": 63.1
+    },
+    "down_vs_all_pct": {
+      "n": 8,
+      "mean": -12.2,
+      "mae": 22.7,
+      "max_abs": 66.1
+    }
+  },
+  "note": "typeperf 为 PDH 逐网卡实例口径；Get-NetAdapterStatistics 在本沙箱被拒（Access denied），PDH 计数器为其等价替代。窗口右端取 dump 文件写入时刻，内部窗口≈1.000 s。"
+}

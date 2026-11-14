@@ -1,0 +1,1193 @@
+//! 窗口、消息循环、三模式定位、托盘与右键菜单。
+//!
+//! 设计要点：单线程、单窗口、1 个 1s 定时器；稳态零堆分配；
+//! 任务栏模式用「置顶覆盖」而不是 SetParent，explorer 重启也不会把我们的窗口带走。
+
+use core::ptr;
+use core::sync::atomic::{AtomicUsize, Ordering};
+
+use windows_sys::Win32::Foundation::{COLORREF, SIZE,
+    GetLastError, HINSTANCE, HWND, LPARAM, LRESULT, POINT, RECT, WPARAM, ERROR_ALREADY_EXISTS,
+};
+use windows_sys::Win32::Graphics::Gdi::{
+    BeginPaint, CreateRoundRectRgn, CreateSolidBrush, DeleteObject, DrawTextW, EndPaint, FillRect, GetDC,
+    GetTextExtentPoint32W,
+    GetMonitorInfoW, InvalidateRect, MonitorFromWindow, ReleaseDC, SelectObject, SetBkMode,
+    SetTextColor, SetWindowRgn, UpdateWindow, MONITORINFO, MONITOR_DEFAULTTONEAREST, HDC, HFONT,
+    HGDIOBJ, PAINTSTRUCT,
+};
+use windows_sys::Win32::System::LibraryLoader::{GetModuleHandleW, GetProcAddress};
+use windows_sys::Win32::System::Threading::{
+    CreateMutexW, GetCurrentProcess, SetProcessWorkingSetSize,
+};
+use windows_sys::Win32::UI::HiDpi::{GetDpiForSystem, GetDpiForWindow};
+use windows_sys::Win32::UI::Shell::{
+    Shell_NotifyIconW, NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD, NIM_DELETE, NIM_MODIFY,
+    NOTIFYICONDATAW,
+};
+use windows_sys::Win32::UI::WindowsAndMessaging::{
+    AppendMenuW, CreatePopupMenu, CreateWindowExW, DefWindowProcW, DestroyMenu, DestroyWindow,
+    SetWindowTextW,
+    DispatchMessageW, FindWindowExW, FindWindowW, GetClassNameW, GetCursorPos, GetForegroundWindow,
+    GetMessageW, GetWindow,
+    GetWindowLongPtrW, GetWindowRect, IsWindowVisible, KillTimer, LoadCursorW, LoadImageW,
+    PostMessageW, PostQuitMessage, RegisterClassExW, RegisterWindowMessageW, SetForegroundWindow,
+    SetTimer, SetWindowLongPtrW, SetWindowPos, ShowWindow, TrackPopupMenuEx, TranslateMessage,
+    CREATESTRUCTW, HMENU, MSG, WNDCLASSEXW,
+};
+
+use windows_sys::Win32::UI::Input::KeyboardAndMouse::{ReleaseCapture, SetCapture};
+
+use crate::config::{self, Config, PosMode, Theme};
+use chip_core::metrics::{Metrics, Sampler};
+use chip_core::paint::{
+    rgb, scale, wide, Fonts, Palette, Texts, WText, BASE_H, BASE_W, COL_CPU, COL_DISK, COL_MEM,
+    COL_NET, RIGHT_EDGE, ROW1_H, ROW1_Y, ROW2_H, ROW2_Y,
+};
+
+// ---- 消息 / 样式常量（用字面量，避免依赖 windows-sys 的常量命名） ----
+const WM_NULL: u32 = 0;
+const WM_DESTROY: u32 = 2;
+const WM_PAINT: u32 = 15;
+const WM_ERASEBKGND: u32 = 20;
+const WM_SETTINGCHANGE: u32 = 26;
+const WM_DISPLAYCHANGE: u32 = 126;
+const WM_NCCREATE: u32 = 129;
+const WM_TIMER: u32 = 275;
+const WM_MOUSEMOVE: u32 = 512;
+const WM_LBUTTONDOWN: u32 = 513;
+const WM_LBUTTONUP: u32 = 514;
+const WM_RBUTTONUP: u32 = 517;
+const WM_CONTEXTMENU: u32 = 123;
+const WM_DPICHANGED: u32 = 736;
+const WM_APP: u32 = 0x8000;
+const WM_QUIT_APP: u32 = WM_APP + 2;
+/// WinEvent 钩子收到 z 序/前台变化后投给自己的消息
+const WM_Z_EVENT: u32 = WM_APP + 3;
+
+/// 防御性 z 序守护定时器：只在「检测到被任务栏压住 / 任务栏刚拿到前台」后跑一小段
+const TIMER_GUARD: usize = 2;
+const GUARD_MS: u32 = 16;
+const GUARD_TICKS: u32 = 40;
+
+const GW_HWNDPREV: u32 = 3;
+const EVENT_SYSTEM_FOREGROUND: u32 = 0x0003;
+const EVENT_OBJECT_REORDER: u32 = 0x8004;
+const WINEVENT_SKIPOWNPROCESS: u32 = 0x0002;
+
+const WS_POPUP: u32 = 0x8000_0000;
+const WS_EX_TOOLWINDOW: u32 = 0x0000_0080;
+const WS_EX_TOPMOST: u32 = 0x0000_0008;
+const WS_EX_NOACTIVATE: u32 = 0x0800_0000;
+const WS_EX_LAYERED: u32 = 0x0008_0000;
+const ULW_ALPHA: u32 = 0x0000_0002;
+const SW_HIDE: i32 = 0;
+const SW_SHOWNOACTIVATE: i32 = 4;
+const SWP_NOSIZE: u32 = 0x0001;
+const SWP_NOMOVE: u32 = 0x0002;
+const SWP_NOACTIVATE: u32 = 0x0010;
+const SWP_NOOWNERZORDER: u32 = 0x0200;
+const GWLP_USERDATA: i32 = -21;
+const GWL_EXSTYLE: i32 = -20;
+const IMAGE_ICON: u32 = 1;
+const LR_DEFAULTSIZE: u32 = 0x0040;
+const LR_SHARED: u32 = 0x8000;
+const IDC_ARROW: u32 = 32512;
+const TPM_RETURNCMD: u32 = 0x0100;
+const TPM_NONOTIFY: u32 = 0x0080;
+const MF_STRING: u32 = 0x0000;
+const MF_CHECKED: u32 = 0x0008;
+const MF_SEPARATOR: u32 = 0x0800;
+const MF_POPUP: u32 = 0x0010;
+
+fn hwnd_topmost() -> HWND {
+    -1isize as HWND
+}
+
+fn rect_zero() -> RECT {
+    RECT { left: 0, top: 0, right: 0, bottom: 0 }
+}
+
+fn eq_wide(a: &[u16], s: &str) -> bool {
+    a.len() == s.len() && a.iter().zip(s.bytes()).all(|(x, b)| *x == b as u16)
+}
+
+
+
+// ---------------------------------------------------------------- 亚克力模糊
+
+#[repr(C)]
+struct AccentPolicy {
+    accent_state: i32,
+    accent_flags: i32,
+    gradient_color: u32,
+    animation_id: i32,
+}
+
+#[repr(C)]
+struct WinCompAttrData {
+    attribute: i32,
+    data: *mut core::ffi::c_void,
+    size_of_data: usize,
+}
+
+const WCA_ACCENT_POLICY: i32 = 19;
+const ACCENT_ENABLE_ACRYLICBLURBEHIND: i32 = 4;
+
+fn acrylic_tint(pal: &Palette) -> u32 {
+    if pal.bg == rgb(0xF3, 0xF3, 0xF3) {
+        0xB8F3F3F3
+    } else {
+        0xB8202020
+    }
+}
+
+/// 给窗口加任务栏同款亚克力模糊；失败返回 false（调用方退回半透明实色）
+unsafe fn enable_acrylic(hwnd: HWND, tint: u32) -> bool {
+    type SetWca = unsafe extern "system" fn(HWND, *mut WinCompAttrData) -> i32;
+    let user32 = GetModuleHandleW(wide("user32.dll").as_ptr());
+    if user32.is_null() {
+        return false;
+    }
+    let proc = GetProcAddress(user32, wide("SetWindowCompositionAttribute").as_ptr().cast());
+    let Some(f) = proc else { return false };
+    let set_wca: SetWca = core::mem::transmute(f);
+    let mut policy = AccentPolicy {
+        accent_state: ACCENT_ENABLE_ACRYLICBLURBEHIND,
+        accent_flags: 2,
+        gradient_color: tint,
+        animation_id: 0,
+    };
+    let mut data = WinCompAttrData {
+        attribute: WCA_ACCENT_POLICY,
+        data: &mut policy as *mut _ as *mut core::ffi::c_void,
+        size_of_data: core::mem::size_of::<AccentPolicy>(),
+    };
+    set_wca(hwnd, &mut data) != 0
+}
+
+
+/// 透明背景上画文字（灰色抗锯齿，避免 ClearType 在透明底上的彩边）
+unsafe fn draw_text(
+    hdc: HDC,
+    t: &WText,
+    x: i32,
+    y: i32,
+    w: i32,
+    h: i32,
+    right: bool,
+    color: COLORREF,
+    font: HFONT,
+) {
+    if t.is_empty() || w <= 0 {
+        return;
+    }
+    let mut rc = RECT { left: x, top: y, right: x + w, bottom: y + h };
+    let fmt = 0x0004u32 | 0x0020u32 | 0x0800u32 | if right { 0x0002u32 } else { 0x0000u32 };
+    SelectObject(hdc, font as HGDIOBJ);
+    SetTextColor(hdc, color);
+    SetBkMode(hdc, 1);
+    DrawTextW(hdc, t.ptr(), t.len as i32, &mut rc, fmt);
+}
+
+
+/// 测量文本像素宽（用于网速列自适应）
+unsafe fn measure_text(hdc: HDC, font: HFONT, t: &WText) -> i32 {
+    SelectObject(hdc, font as HGDIOBJ);
+    let mut sz = SIZE { cx: 0, cy: 0 };
+    GetTextExtentPoint32W(hdc, t.ptr(), t.len as i32, &mut sz);
+    sz.cx
+}
+
+pub struct App {
+    hwnd: HWND,
+    hinst: HINSTANCE,
+    cfg: Config,
+    sampler: Sampler,
+    metrics: Metrics,
+    texts: Texts,
+    fonts: Option<Fonts>,
+    pal: Palette,
+
+    acrylic: bool,
+    brush: HGDIOBJ,
+    dpi: u32,
+    w: i32,
+    h: i32,
+    tick: u32,
+    drag: Option<(i32, i32)>,
+    dragging: bool,
+    in_menu: bool,
+    visible: bool,
+    tray_ok: bool,
+    tray_cb: u32,
+    taskbar_created: u32,
+    evt_reorder: *mut core::ffi::c_void,
+    evt_fg: *mut core::ffi::c_void,
+    guard_ticks: u32,
+    raises: u32,
+    trace: bool,
+    demo: bool,
+    t0: i64,
+}
+
+impl App {
+    fn new(cfg: Config, trace: bool, demo: bool, t0: i64) -> Self {
+        Self {
+            hwnd: ptr::null_mut(),
+            hinst: ptr::null_mut(),
+            cfg,
+            sampler: Sampler::new(),
+            metrics: Metrics::default(),
+            texts: Texts::new(),
+            fonts: None,
+            pal: Palette::light(),
+
+            acrylic: false,
+            brush: ptr::null_mut(),
+            dpi: 96,
+            w: BASE_W,
+            h: BASE_H,
+            tick: 0,
+            drag: None,
+            dragging: false,
+            in_menu: false,
+            visible: false,
+            tray_ok: false,
+            tray_cb: WM_APP + 1,
+            taskbar_created: 0,
+            evt_reorder: ptr::null_mut(),
+            evt_fg: ptr::null_mut(),
+            guard_ticks: 0,
+            raises: 0,
+            trace,
+            demo,
+            t0,
+        }
+    }
+
+    unsafe fn init_graphics(&mut self) {
+        self.dpi = GetDpiForWindow(self.hwnd);
+        if self.dpi == 0 {
+            self.dpi = 96;
+        }
+        self.w = scale(BASE_W, self.dpi);
+        // v0.3：高度 = 任务栏真实高度（整条覆盖），取不到时退回 48 逻辑
+        self.h = match Self::taskbar_rect() {
+            Some(r) => ((r.bottom - r.top) - scale(1, self.dpi)).max(scale(24, self.dpi)),
+            None => scale(BASE_H, self.dpi),
+        };
+        self.pal = self.effective_palette();
+        self.fonts = Some(Fonts::create(self.h));
+        self.brush = CreateSolidBrush(self.pal.bg) as HGDIOBJ;
+        // 真高斯模糊：DWM 亚克力（普通窗口 + SetWindowCompositionAttribute）
+        self.acrylic = enable_acrylic(self.hwnd, acrylic_tint(&self.pal));
+        self.apply_corners();
+    }
+
+    fn effective_palette(&self) -> Palette {
+        let light = match self.cfg.theme {
+            Theme::Light => true,
+            Theme::Dark => false,
+            Theme::Auto => config::theme_is_light(),
+        };
+        if light {
+            Palette::light()
+        } else {
+            Palette::dark()
+        }
+    }
+
+    unsafe fn apply_corners(&self) {
+        // v0.3：整条覆盖任务栏，直角矩形即可；显式清掉可能残留的区域
+        SetWindowRgn(self.hwnd, ptr::null_mut(), 1);
+    }
+
+    // ------------------------------------------------------------ 定位
+
+    unsafe fn monitor_info(&self) -> MONITORINFO {
+        let mon = MonitorFromWindow(self.hwnd, MONITOR_DEFAULTTONEAREST);
+        let mut mi: MONITORINFO = core::mem::zeroed();
+        mi.cbSize = core::mem::size_of::<MONITORINFO>() as u32;
+        GetMonitorInfoW(mon, &mut mi);
+        mi
+    }
+
+    /// 桌面模式：右下角，贴任务栏上沿与屏幕右缘（0 间距，视觉上与任务栏连成一体）
+    fn desktop_pos(&self) -> (i32, i32) {
+        let mi = unsafe { self.monitor_info() };
+        (mi.rcWork.right - self.w, mi.rcWork.bottom - self.h)
+    }
+
+    unsafe fn taskbar_rect() -> Option<RECT> {
+        let h = FindWindowW(wide("Shell_TrayWnd").as_ptr(), ptr::null());
+        if h.is_null() {
+            return None;
+        }
+        let mut r = rect_zero();
+        if GetWindowRect(h, &mut r) == 0 {
+            return None;
+        }
+        Some(r)
+    }
+
+    fn taskbar_pos(&self) -> Option<(i32, i32)> {
+        let bar = unsafe { Self::taskbar_rect() }?;
+        // v0.4：下移 1 逻辑像素，露出任务栏顶部那条细线；底边与任务栏底对齐
+        Some((bar.left, bar.top + scale(1, self.dpi)))
+    }
+
+    /// 托盘通知区左边界（物理坐标）：用于「贴任务栏右端」避开时钟/图标
+    unsafe fn tray_notify_rect() -> Option<RECT> {
+        let tray = FindWindowW(wide("Shell_TrayWnd").as_ptr(), ptr::null());
+        if tray.is_null() {
+            return None;
+        }
+        let tn = FindWindowExW(tray, ptr::null_mut(), wide("TrayNotifyWnd").as_ptr(), ptr::null());
+        if tn.is_null() {
+            return None;
+        }
+        let mut r = rect_zero();
+        if GetWindowRect(tn, &mut r) == 0 {
+            return None;
+        }
+        Some(r)
+    }
+
+    fn taskbar_right_pos(&self) -> Option<(i32, i32)> {
+        let bar = unsafe { Self::taskbar_rect() }?;
+        let bh = bar.bottom - bar.top;
+        let pad = scale(4, self.dpi);
+        let x = match unsafe { Self::tray_notify_rect() } {
+            Some(tn) if tn.left - self.w - pad > bar.left => tn.left - self.w - pad,
+            _ => bar.right - self.w - scale(150, self.dpi),
+        };
+        Some((x, bar.top + (bh - self.h) / 2))
+    }
+
+    fn taskbar_offscreen(&self) -> bool {
+        let Some(bar) = (unsafe { Self::taskbar_rect() }) else {
+            return true;
+        };
+        let mi = unsafe { self.monitor_info() };
+        let m = mi.rcMonitor;
+        bar.top >= m.bottom || bar.bottom <= m.top || bar.left >= m.right || bar.right <= m.left
+    }
+
+    unsafe fn apply_position(&mut self) {
+        let (x, y) = match self.cfg.mode {
+            PosMode::Taskbar => self.taskbar_pos().unwrap_or_else(|| self.desktop_pos()),
+            PosMode::TaskbarRight => {
+                self.taskbar_right_pos().unwrap_or_else(|| self.desktop_pos())
+            }
+            PosMode::Free => (self.cfg.x, self.cfg.y),
+            PosMode::Desktop => self.desktop_pos(),
+        };
+        SetWindowPos(self.hwnd, hwnd_topmost(), x, y, self.w, self.h, SWP_NOACTIVATE);
+    }
+
+    // ------------------------------------------------------------ 绘制
+
+    unsafe fn render(&self, dst: HDC) {
+        let Some(f) = &self.fonts else { return };
+        let dpi = self.dpi;
+        let row_h = self.h / 2;
+        // 亚克力可用：只画文字（模糊由 DWM 合成在窗口后面）；失败则自己填实色底
+        if !self.acrylic {
+            let rc = RECT { left: 0, top: 0, right: self.w, bottom: self.h };
+            FillRect(dst, &rc, self.brush as _);
+        }
+        let m = &self.metrics;
+        let cols = [
+            (COL_CPU, &self.texts.cpu_lab, &self.texts.cpu_val, self.pal.level(m.cpu)),
+            (COL_MEM, &self.texts.mem_lab, &self.texts.mem_val, self.pal.level(m.mem)),
+            (COL_DISK, &self.texts.disk_lab, &self.texts.disk_val, self.pal.level(m.disk)),
+        ];
+        for (x, lab, val, color) in cols {
+            let px = scale(x, dpi);
+            let pw = scale(40, dpi);
+            draw_text(dst, lab, px, 0, pw, row_h, false, self.pal.label, f.label);
+            draw_text(dst, val, px, row_h, pw, self.h - row_h, false, color, f.value);
+        }
+        let nx = scale(COL_NET, dpi);
+        let aw = scale(8, dpi);
+        let sx = nx + aw + scale(2, dpi);
+        let sw = scale(RIGHT_EDGE - COL_NET, dpi) - aw - scale(2, dpi);
+        draw_text(dst, &self.texts.up_arrow, nx, 0, aw, row_h, false, self.pal.up, f.label);
+        draw_text(dst, &self.texts.up_speed, sx, 0, sw, row_h, false, self.pal.label, f.label);
+        draw_text(dst, &self.texts.down_arrow, nx, row_h, aw, self.h - row_h, false, self.pal.down, f.value);
+        draw_text(dst, &self.texts.down_speed, sx, row_h, sw, self.h - row_h, false, self.pal.label, f.value);
+    }
+
+    unsafe fn paint_now(&mut self) {
+        let hdc = GetDC(self.hwnd);
+        if !hdc.is_null() {
+            self.render(hdc);
+            ReleaseDC(self.hwnd, hdc);
+        }
+    }
+
+    unsafe fn on_paint(&mut self) {
+        let mut ps: PAINTSTRUCT = core::mem::zeroed();
+        let hdc = BeginPaint(self.hwnd, &mut ps);
+        self.render(hdc);
+        EndPaint(self.hwnd, &ps);
+    }
+
+    // ------------------------------------------------------------ 定时
+
+    unsafe fn on_timer(&mut self) {
+        self.tick = self.tick.wrapping_add(1);
+        self.raises = 0;
+        // 菜单/拖动时不抢 z 序；其余每秒自查一次是否被任务栏压住（真的被压才提层）
+        if !self.in_menu && !self.dragging && self.covered_by_taskbar() {
+            self.raise_above_taskbar();
+        }
+        // --demo：固定最坏读数，专门用来自检排版（网速最大值/100%）
+        let m = if self.demo {
+            Metrics { cpu: 100, mem: 99, disk: 100, up: 999_999, down: 12_345_678 }
+        } else {
+            self.sampler.sample()
+        };
+        self.metrics = m;
+        let mut t = self.texts;
+        t.apply(&m, &self.cfg.items);
+        // 宽度自适应：网速右对齐放不下时退成整数格式，绝不和箭头重叠
+        if let Some(f) = &self.fonts {
+            let avail = scale(RIGHT_EDGE - COL_NET, self.dpi) - scale(9, self.dpi);
+            let hdc = GetDC(self.hwnd);
+            if !hdc.is_null() {
+                if measure_text(hdc, f.label, &t.up_speed) > avail {
+                    t.up_speed.set_rate_compact(m.up);
+                }
+                if measure_text(hdc, f.value, &t.down_speed) > avail {
+                    t.down_speed.set_rate_compact(m.down);
+                }
+                ReleaseDC(self.hwnd, hdc);
+            }
+        }
+        if t != self.texts {
+            self.texts = t;
+            InvalidateRect(self.hwnd, ptr::null(), 0);
+        }
+
+        self.update_visibility();
+
+        // 周期性归还工作集：默认 1s 刷新时，常驻内存可压在 ~3MB 以内
+        if self.tick == 3 || self.tick % 120 == 0 {
+            self.trim();
+        }
+
+        if matches!(self.cfg.mode, PosMode::Taskbar | PosMode::TaskbarRight) {
+            if self.taskbar_offscreen() {
+                return;
+            }
+            let pos = if self.cfg.mode == PosMode::TaskbarRight {
+                self.taskbar_right_pos()
+            } else {
+                self.taskbar_pos()
+            };
+            if let Some((x, y)) = pos {
+                let mut cur = rect_zero();
+                GetWindowRect(self.hwnd, &mut cur);
+                if cur.left != x || cur.top != y {
+                    SetWindowPos(self.hwnd, hwnd_topmost(), x, y, 0, 0, SWP_NOSIZE | SWP_NOACTIVATE);
+                }
+            }
+        }
+    }
+
+    unsafe fn update_visibility(&mut self) {
+        let mut want = true;
+        if self.cfg.hide_fs && self.is_fullscreen_foreground() {
+            want = false;
+        }
+        if matches!(self.cfg.mode, PosMode::Taskbar | PosMode::TaskbarRight)
+            && self.taskbar_offscreen()
+        {
+            want = false;
+        }
+        if want != self.visible {
+            ShowWindow(self.hwnd, if want { SW_SHOWNOACTIVATE } else { SW_HIDE });
+            self.visible = want;
+            if want {
+                self.paint_now();
+            }
+        }
+    }
+
+    unsafe fn is_fullscreen_foreground(&self) -> bool {
+        let fg = GetForegroundWindow();
+        if fg.is_null() || fg == self.hwnd {
+            return false;
+        }
+        let mut cls = [0u16; 64];
+        let n = GetClassNameW(fg, cls.as_mut_ptr(), 64);
+        if n <= 0 {
+            return false;
+        }
+        let name = &cls[..n as usize];
+        if eq_wide(name, "Progman") || eq_wide(name, "WorkerW") || eq_wide(name, "Shell_TrayWnd") {
+            return false;
+        }
+        if IsWindowVisible(fg) == 0 {
+            return false;
+        }
+        let mut r = rect_zero();
+        if GetWindowRect(fg, &mut r) == 0 {
+            return false;
+        }
+        let mi = self.monitor_info();
+        let m = mi.rcMonitor;
+        r.left <= m.left && r.top <= m.top && r.right >= m.right && r.bottom >= m.bottom
+    }
+
+    // ------------------------------------------------------------ 拖动
+
+    unsafe fn on_drag_begin(&mut self) {
+        if self.cfg.locked {
+            return;
+        }
+        let mut pt = POINT { x: 0, y: 0 };
+        GetCursorPos(&mut pt);
+        let mut r = rect_zero();
+        GetWindowRect(self.hwnd, &mut r);
+        self.drag = Some((pt.x - r.left, pt.y - r.top));
+        self.dragging = true;
+        SetCapture(self.hwnd);
+    }
+
+    unsafe fn on_drag_move(&mut self) {
+        if !self.dragging {
+            return;
+        }
+        let Some((ox, oy)) = self.drag else { return };
+        let mut pt = POINT { x: 0, y: 0 };
+        GetCursorPos(&mut pt);
+        SetWindowPos(self.hwnd, hwnd_topmost(), pt.x - ox, pt.y - oy, 0, 0, SWP_NOSIZE | SWP_NOACTIVATE);
+    }
+
+    unsafe fn on_drag_end(&mut self) {
+        if !self.dragging {
+            return;
+        }
+        self.dragging = false;
+        self.drag = None;
+        ReleaseCapture();
+        let mut r = rect_zero();
+        GetWindowRect(self.hwnd, &mut r);
+        self.cfg.mode = PosMode::Free;
+        self.cfg.x = r.left;
+        self.cfg.y = r.top;
+        self.cfg.save();
+    }
+
+    // ------------------------------------------------------------ 菜单
+
+    unsafe fn on_menu(&mut self) {
+        let menu = CreatePopupMenu();
+        let items = CreatePopupMenu();
+        append_item(items, 1, "显示 CPU", self.cfg.items.cpu);
+        append_item(items, 2, "显示 内存", self.cfg.items.mem);
+        append_item(items, 3, "显示 磁盘", self.cfg.items.disk);
+        append_item(items, 4, "显示 网速", self.cfg.items.net);
+        AppendMenuW(menu, MF_POPUP, items as usize, wide("显示指标").as_ptr());
+
+        let pos = CreatePopupMenu();
+        append_item(pos, 11, "桌面右下角（贴任务栏）", self.cfg.mode == PosMode::Desktop);
+        append_item(pos, 12, "贴任务栏左端", self.cfg.mode == PosMode::Taskbar);
+        // 贴任务栏右端：本机任务栏图标居中且已排到托盘，硬放会盖图标，故不进菜单（保留 config 项 taskbar-right）
+        AppendMenuW(menu, MF_POPUP, pos as usize, wide("位置").as_ptr());
+
+        let itv = CreatePopupMenu();
+        append_item(itv, 21, "0.5 秒", self.cfg.interval == 500);
+        append_item(itv, 22, "1 秒", self.cfg.interval == 1000);
+        append_item(itv, 23, "2 秒", self.cfg.interval == 2000);
+        append_item(itv, 24, "5 秒", self.cfg.interval == 5000);
+        AppendMenuW(menu, MF_POPUP, itv as usize, wide("刷新间隔").as_ptr());
+
+        let theme = CreatePopupMenu();
+        append_item(theme, 31, "跟随系统", self.cfg.theme == Theme::Auto);
+        append_item(theme, 32, "浅色", self.cfg.theme == Theme::Light);
+        append_item(theme, 33, "深色", self.cfg.theme == Theme::Dark);
+        AppendMenuW(menu, MF_POPUP, theme as usize, wide("主题").as_ptr());
+
+        AppendMenuW(menu, MF_SEPARATOR, 0, ptr::null());
+        append_item(menu, 43, "开机自启", self.cfg.autostart);
+        AppendMenuW(menu, MF_SEPARATOR, 0, ptr::null());
+        append_item(menu, 99, "退出", false);
+
+        let mut pt = POINT { x: 0, y: 0 };
+        GetCursorPos(&mut pt);
+        SetForegroundWindow(self.hwnd);
+        self.in_menu = true;
+        let cmd = TrackPopupMenuEx(
+            menu,
+            TPM_RETURNCMD | TPM_NONOTIFY,
+            pt.x,
+            pt.y,
+            self.hwnd,
+            ptr::null(),
+        );
+        DestroyMenu(menu);
+        self.in_menu = false;
+        PostMessageW(self.hwnd, WM_NULL, 0, 0);
+        if cmd != 0 {
+            self.on_cmd(cmd as u32);
+        }
+    }
+
+    unsafe fn on_cmd(&mut self, cmd: u32) {
+        match cmd {
+            1 => self.cfg.items.cpu = !self.cfg.items.cpu,
+            2 => self.cfg.items.mem = !self.cfg.items.mem,
+            3 => self.cfg.items.disk = !self.cfg.items.disk,
+            4 => self.cfg.items.net = !self.cfg.items.net,
+            11 => {
+                self.cfg.mode = PosMode::Desktop;
+                self.apply_position();
+            }
+            12 => {
+                self.cfg.mode = PosMode::Taskbar;
+                self.apply_position();
+            }
+            13 => {
+                self.cfg.mode = PosMode::TaskbarRight;
+                self.apply_position();
+            }
+            14 => {
+                let mut r = rect_zero();
+                GetWindowRect(self.hwnd, &mut r);
+                self.cfg.mode = PosMode::Free;
+                self.cfg.x = r.left;
+                self.cfg.y = r.top;
+            }
+            21 => self.set_interval(500),
+            22 => self.set_interval(1000),
+            23 => self.set_interval(2000),
+            24 => self.set_interval(5000),
+            31 => {
+                self.cfg.theme = Theme::Auto;
+                self.refresh_palette();
+            }
+            32 => {
+                self.cfg.theme = Theme::Light;
+                self.refresh_palette();
+            }
+            33 => {
+                self.cfg.theme = Theme::Dark;
+                self.refresh_palette();
+            }
+            41 => self.cfg.locked = !self.cfg.locked,
+            42 => self.cfg.hide_fs = !self.cfg.hide_fs,
+            43 => {
+                let on = !self.cfg.autostart;
+                if config::set_autostart(on) {
+                    self.cfg.autostart = on;
+                }
+            }
+            99 => {
+                DestroyWindow(self.hwnd);
+                return;
+            }
+            _ => {}
+        }
+        self.cfg.save();
+        let mut t = self.texts;
+        t.apply(&self.metrics, &self.cfg.items);
+        self.texts = t;
+        InvalidateRect(self.hwnd, ptr::null(), 1);
+    }
+
+    fn set_interval(&mut self, ms: u32) {
+        self.cfg.interval = ms;
+        unsafe {
+            KillTimer(self.hwnd, 1);
+            SetTimer(self.hwnd, 1, ms, None);
+        }
+    }
+
+    unsafe fn refresh_palette(&mut self) {
+        self.pal = self.effective_palette();
+        if !self.brush.is_null() {
+            DeleteObject(self.brush);
+        }
+        self.brush = CreateSolidBrush(self.pal.bg) as HGDIOBJ;
+        InvalidateRect(self.hwnd, ptr::null(), 1);
+    }
+
+    // ------------------------------------------------------------ 主题 / DPI / 生命周期
+
+    unsafe fn on_setting_change(&mut self) {
+        if self.cfg.theme == Theme::Auto {
+            self.refresh_palette();
+        }
+    }
+
+    unsafe fn on_display_change(&mut self) {
+        let dpi = GetDpiForWindow(self.hwnd);
+        self.dpi = if dpi == 0 { GetDpiForSystem() } else { dpi };
+        let w = scale(BASE_W, self.dpi);
+        let h = match Self::taskbar_rect() {
+            Some(r) => ((r.bottom - r.top) - scale(1, self.dpi)).max(scale(24, self.dpi)),
+            None => scale(BASE_H, self.dpi),
+        };
+        self.w = w;
+        self.h = h;
+        self.fonts = Some(Fonts::create(self.h));
+        self.apply_corners();
+        SetWindowPos(self.hwnd, hwnd_topmost(), 0, 0, w, h, SWP_NOMOVE | SWP_NOACTIVATE);
+        self.apply_position();
+        InvalidateRect(self.hwnd, ptr::null(), 1);
+    }
+
+    unsafe fn on_destroy(&mut self) {
+        KillTimer(self.hwnd, 1);
+        self.del_tray();
+        self.fonts = None;
+        if !self.brush.is_null() {
+            DeleteObject(self.brush);
+            self.brush = ptr::null_mut();
+        }
+        PostQuitMessage(0);
+    }
+
+    // ------------------------------------------------------------ 托盘
+
+    unsafe fn update_tray(&mut self) {
+        let icon = LoadImageW(self.hinst, 1 as *const u16, IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_SHARED);
+        let mut nid: NOTIFYICONDATAW = core::mem::zeroed();
+        nid.cbSize = core::mem::size_of::<NOTIFYICONDATAW>() as u32;
+        nid.hWnd = self.hwnd;
+        nid.uID = 1;
+        nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
+        nid.uCallbackMessage = self.tray_cb;
+        nid.hIcon = icon as _;
+        let tip = "SysMon Chip · 资源条".encode_utf16();
+        for (i, ch) in tip.take(127).enumerate() {
+            nid.szTip[i] = ch;
+        }
+        if self.tray_ok {
+            Shell_NotifyIconW(NIM_MODIFY, &nid);
+        } else {
+            self.tray_ok = Shell_NotifyIconW(NIM_ADD, &nid) != 0;
+        }
+    }
+
+    unsafe fn del_tray(&mut self) {
+        if self.tray_ok {
+            let mut nid: NOTIFYICONDATAW = core::mem::zeroed();
+            nid.cbSize = core::mem::size_of::<NOTIFYICONDATAW>() as u32;
+            nid.hWnd = self.hwnd;
+            nid.uID = 1;
+            Shell_NotifyIconW(NIM_DELETE, &nid);
+            self.tray_ok = false;
+        }
+    }
+
+    unsafe fn on_tray(&mut self, _wp: u32, lp: u32) {
+        let low = lp & 0xFFFF;
+        match low {
+            WM_LBUTTONUP => {
+                if self.visible {
+                    ShowWindow(self.hwnd, SW_HIDE);
+                    self.visible = false;
+                } else {
+                    ShowWindow(self.hwnd, SW_SHOWNOACTIVATE);
+                    self.visible = true;
+                    self.raise_above_taskbar();
+                    self.paint_now();
+                }
+            }
+            WM_RBUTTONUP | WM_CONTEXTMENU => self.on_menu(),
+            _ => {}
+        }
+    }
+
+    unsafe fn on_taskbar_created(&mut self) {
+        self.tray_ok = false;
+        self.update_tray();
+        self.raise_above_taskbar();
+        if self.cfg.mode == PosMode::Taskbar {
+            self.apply_position();
+        }
+    }
+
+    /// 把自己提到任务栏之上。
+    ///
+    /// 任务栏（Shell_TrayWnd）自己也是 WS_EX_TOPMOST：点它空白处时 explorer 会
+    /// SetWindowPos(HWND_TOPMOST) 把自己提到 topmost 带顶，于是把我们压住 ——
+    /// 视觉上就是「资源条消失、约半秒后又被定时器提回来」。
+    /// 首选插到任务栏正上方（不挡后升起的开始菜单）；跨进程插位被系统拒绝时
+    /// （低完整性下实测 SetWindowPos 返回 0）退回 HWND_TOPMOST，仍然高于任务栏。
+    unsafe fn raise_above_taskbar(&self) {
+        let flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER;
+        let tray = FindWindowW(wide("Shell_TrayWnd").as_ptr(), ptr::null());
+        // SetWindowPos 的 hWndInsertAfter 是「排在目标窗口前面」的那一个：
+        // 直接传任务栏句柄会把自己塞到任务栏*后面*，必须传任务栏前面那一个。
+        if !tray.is_null() {
+            let front = GetWindow(tray, GW_HWNDPREV);
+            if !front.is_null() {
+                let ex = GetWindowLongPtrW(front, GWL_EXSTYLE) as u32;
+                if ex & WS_EX_TOPMOST != 0
+                    && SetWindowPos(self.hwnd, front, 0, 0, 0, 0, flags) != 0
+                {
+                    return;
+                }
+            }
+        }
+        SetWindowPos(self.hwnd, hwnd_topmost(), 0, 0, 0, 0, flags);
+    }
+
+    /// 任务栏是否在 z 序里压着我们：沿 GW_HWNDPREV 往上找若干层。
+    unsafe fn covered_by_taskbar(&self) -> bool {
+        let tray = FindWindowW(wide("Shell_TrayWnd").as_ptr(), ptr::null());
+        if tray.is_null() {
+            return false;
+        }
+        let mut h = self.hwnd;
+        for _ in 0..12 {
+            let prev = GetWindow(h, GW_HWNDPREV);
+            if prev.is_null() || prev == self.hwnd {
+                return false;
+            }
+            if prev == tray {
+                return true;
+            }
+            h = prev;
+        }
+        false
+    }
+
+    unsafe fn fg_is_taskbar(&self) -> bool {
+        let fg = GetForegroundWindow();
+        if fg.is_null() {
+            return false;
+        }
+        let mut cls = [0u16; 64];
+        let n = GetClassNameW(fg, cls.as_mut_ptr(), 64);
+        n > 0 && eq_wide(&cls[..n as usize], "Shell_TrayWnd")
+    }
+
+    /// z 序守护：被压住时的兜底自查（16ms 一次，只跑一小段，不影响稳态开销）
+    /// 已经在跑就不续期，避免事件风暴把定时器一直顶在 16ms
+    unsafe fn start_guard(&mut self) {
+        if self.guard_ticks > 0 {
+            return;
+        }
+        self.guard_ticks = GUARD_TICKS;
+        SetTimer(self.hwnd, TIMER_GUARD, GUARD_MS, None);
+    }
+
+    unsafe fn on_guard(&mut self) {
+        self.guard_ticks = self.guard_ticks.saturating_sub(1);
+        if self.guard_ticks == 0 {
+            KillTimer(self.hwnd, TIMER_GUARD);
+        }
+        if !self.in_menu && !self.dragging && self.covered_by_taskbar() {
+            self.raise_above_taskbar();
+        }
+    }
+
+    /// WinEvent 触发的即时自查：钩子回调只投消息，真正干活在这里（避免钩子里重入）。
+    /// `event` 区分事件类型：z 序重排只做「被压住才提层」；只有前台切换才开守护窗口期
+    /// （鼠标停在任务栏上时 Explorer 会持续重排，不能让重排事件反复唤醒定时器）。
+    unsafe fn on_z_event(&mut self, event: u32) {
+        if self.in_menu || self.dragging {
+            return;
+        }
+        if self.covered_by_taskbar() {
+            if self.raises < 60 {
+                self.raise_above_taskbar();
+                self.raises += 1;
+            }
+            self.start_guard();
+            return;
+        }
+        if event == EVENT_SYSTEM_FOREGROUND && self.fg_is_taskbar() {
+            // 任务栏刚拿到前台，接下来一小段时间它可能还会再抢一次 z 序
+            self.start_guard();
+        }
+    }
+
+    unsafe fn install_z_hooks(&mut self) {
+        type WinEventProc =
+            unsafe extern "system" fn(*mut core::ffi::c_void, u32, HWND, i32, i32, u32, u32);
+        type SetHook = unsafe extern "system" fn(
+            u32,
+            u32,
+            *mut core::ffi::c_void,
+            Option<WinEventProc>,
+            u32,
+            u32,
+            u32,
+        ) -> *mut core::ffi::c_void;
+        let user32 = GetModuleHandleW(wide("user32.dll").as_ptr());
+        if user32.is_null() {
+            return;
+        }
+        // GetProcAddress 要 ANSI 名字：这里必须是字节串，用 wide() 传 UTF-16 会查成 "S" 而静默返回空
+        let Some(p) = GetProcAddress(user32, b"SetWinEventHook\0".as_ptr().cast()) else {
+            return;
+        };
+        let set_hook: SetHook = core::mem::transmute(p);
+        self.evt_reorder = set_hook(
+            EVENT_OBJECT_REORDER,
+            EVENT_OBJECT_REORDER,
+            ptr::null_mut(),
+            Some(win_event_cb),
+            0,
+            0,
+            WINEVENT_SKIPOWNPROCESS,
+        );
+        self.evt_fg = set_hook(
+            EVENT_SYSTEM_FOREGROUND,
+            EVENT_SYSTEM_FOREGROUND,
+            ptr::null_mut(),
+            Some(win_event_cb),
+            0,
+            0,
+            WINEVENT_SKIPOWNPROCESS,
+        );
+    }
+
+    /// 调试：把最近一次内部事件写进窗口标题（外部探针可读）
+    #[allow(dead_code)]
+    unsafe fn dbg_title(&self, tag: &str) {
+        let w = wide(tag);
+        SetWindowTextW(self.hwnd, w.as_ptr());
+    }
+
+    unsafe fn trim(&mut self) {
+        SetProcessWorkingSetSize(GetCurrentProcess(), usize::MAX, usize::MAX);
+    }
+
+    fn write_trace(&self) {
+        if !self.trace {
+            return;
+        }
+        crate::trace_write(self.t0, self.dpi, self.w, self.h);
+    }
+}
+
+unsafe fn append_item(menu: HMENU, id: usize, label: &str, checked: bool) {
+    let flags = if checked { MF_STRING | MF_CHECKED } else { MF_STRING };
+    AppendMenuW(menu, flags, id, wide(label).as_ptr());
+}
+
+/// WinEvent 回调没有用户参数，投消息只能走全局
+static CHIP_HWND: AtomicUsize = AtomicUsize::new(0);
+
+unsafe extern "system" fn win_event_cb(
+    _hook: *mut core::ffi::c_void,
+    ev: u32,
+    _hwnd: HWND,
+    _obj: i32,
+    _child: i32,
+    _thr: u32,
+    _time: u32,
+) {
+    let h = CHIP_HWND.load(Ordering::Relaxed);
+    if h != 0 {
+        // wParam 带上事件类型，消息处理侧据此区分「重排」与「前台切换」
+        PostMessageW(h as HWND, WM_Z_EVENT, ev as usize, 0);
+    }
+}
+
+unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> LRESULT {
+    if msg == WM_NCCREATE {
+        let cs = &*(lp as *const CREATESTRUCTW);
+        SetWindowLongPtrW(hwnd, GWLP_USERDATA, cs.lpCreateParams as isize);
+        return DefWindowProcW(hwnd, msg, wp, lp);
+    }
+    let app_ptr = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut App;
+    if app_ptr.is_null() {
+        return DefWindowProcW(hwnd, msg, wp, lp);
+    }
+    let app = &mut *app_ptr;
+    match msg {
+        WM_PAINT => {
+            app.on_paint();
+            0
+        }
+        WM_TIMER => {
+            if wp == 1 {
+                app.on_timer();
+            } else if wp == TIMER_GUARD {
+                app.on_guard();
+            }
+            0
+        }
+        WM_ERASEBKGND => 1,
+        WM_LBUTTONDOWN => {
+            0
+        }
+        WM_MOUSEMOVE => {
+            0
+        }
+        WM_LBUTTONUP => {
+            0
+        }
+        WM_RBUTTONUP => {
+            app.on_menu();
+            0
+        }
+        WM_SETTINGCHANGE => {
+            app.on_setting_change();
+            0
+        }
+        WM_DISPLAYCHANGE | WM_DPICHANGED => {
+            app.on_display_change();
+            0
+        }
+        WM_DESTROY => {
+            app.on_destroy();
+            0
+        }
+        _ => {
+            if msg == app.tray_cb {
+                app.on_tray(wp as u32, lp as u32);
+                return 0;
+            }
+            if app.taskbar_created != 0 && msg == app.taskbar_created {
+                app.on_taskbar_created();
+                return 0;
+            }
+            if msg == WM_Z_EVENT {
+                app.on_z_event(wp as u32);
+                return 0;
+            }
+            if msg == WM_QUIT_APP {
+                DestroyWindow(hwnd);
+                return 0;
+            }
+            DefWindowProcW(hwnd, msg, wp, lp)
+        }
+    }
+}
+
+unsafe fn create_window(app_ptr: *mut App) -> HWND {
+    let hinst = GetModuleHandleW(ptr::null());
+    let class = wide("SysMonChipWnd");
+    let mut wc: WNDCLASSEXW = core::mem::zeroed();
+    wc.cbSize = core::mem::size_of::<WNDCLASSEXW>() as u32;
+    wc.style = 0;
+    wc.lpfnWndProc = Some(wndproc);
+    wc.hInstance = hinst;
+    wc.hCursor = LoadCursorW(ptr::null_mut(), IDC_ARROW as *const u16);
+    wc.lpszClassName = class.as_ptr();
+    RegisterClassExW(&wc);
+
+    let dpi = GetDpiForSystem();
+    let w = scale(BASE_W, if dpi == 0 { 96 } else { dpi });
+    let h = scale(BASE_H, if dpi == 0 { 96 } else { dpi });
+    CreateWindowExW(
+        WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
+        class.as_ptr(),
+        ptr::null(),
+        WS_POPUP,
+        0,
+        0,
+        w,
+        h,
+        ptr::null_mut(),
+        ptr::null_mut(),
+        hinst,
+        app_ptr as *const _,
+    )
+}
+
+/// 请求已运行的实例退出（验收脚本与命令行都用它，避免 taskkill 的权限问题）
+pub fn quit_existing() {
+    unsafe {
+        if let Some(h) = find_existing() {
+            PostMessageW(h, WM_QUIT_APP, 0, 0);
+        }
+    }
+}
+
+fn find_existing() -> Option<HWND> {
+    let h = unsafe { FindWindowW(wide("SysMonChipWnd").as_ptr(), ptr::null()) };
+    if h.is_null() {
+        None
+    } else {
+        Some(h)
+    }
+}
+
+pub fn run(trace: bool, demo: bool, t0: i64) {
+    unsafe {
+        let mutex = CreateMutexW(ptr::null(), 0, wide("Local\\SysMonChip.v1").as_ptr());
+        if mutex.is_null() {
+            return;
+        }
+        if GetLastError() == ERROR_ALREADY_EXISTS {
+            if let Some(h) = find_existing() {
+                ShowWindow(h, SW_SHOWNOACTIVATE);
+                SetWindowPos(h, hwnd_topmost(), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
+            }
+            return;
+        }
+
+        let mut cfg = Config::load();
+        cfg.autostart = config::autostart_registered();
+
+        // no_std：App 放栈上（WinMain 帧贯穿整个消息循环），指针经 GWLP_USERDATA 传给窗口过程
+        let mut app = App::new(cfg, trace, demo, t0);
+        let app_ptr: *mut App = &mut app;
+        let hwnd = create_window(app_ptr);
+        if hwnd.is_null() {
+            return;
+        }
+        app.hwnd = hwnd;
+        app.hinst = GetModuleHandleW(ptr::null());
+        app.taskbar_created = RegisterWindowMessageW(wide("TaskbarCreated").as_ptr());
+        CHIP_HWND.store(hwnd as usize, Ordering::Relaxed);
+        app.install_z_hooks();
+        app.init_graphics();
+        // v0.4：首帧只采 CPU/内存/磁盘（跳过网卡枚举），先把界面显示出来
+        app.metrics = app.sampler.sample_fast();
+        let mut t0texts = app.texts;
+        t0texts.apply(&app.metrics, &app.cfg.items);
+        app.texts = t0texts;
+        app.apply_position();
+        app.paint_now();
+        ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+        UpdateWindow(hwnd);
+        app.visible = true;
+        app.trim();
+        app.update_tray();
+        if trace {
+            app.write_trace();
+        }
+        // 首帧之后补全网络数据，再刷一次（此时已可见，用户看不到延迟）
+        app.metrics = app.sampler.sample();
+        let mut t1texts = app.texts;
+        t1texts.apply(&app.metrics, &app.cfg.items);
+        app.texts = t1texts;
+        app.paint_now();
+
+        SetTimer(hwnd, 1, app.cfg.interval, None);
+
+        let mut msg: MSG = core::mem::zeroed();
+        while GetMessageW(&mut msg, ptr::null_mut(), 0, 0) > 0 {
+            TranslateMessage(&msg);
+            DispatchMessageW(&msg);
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

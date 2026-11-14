@@ -1,0 +1,909 @@
+{
+  "default_position": {
+    "lite": {
+      "rect": [
+        9,
+        2065,
+        455,
+        2146
+      ],
+      "size": [
+        446,
+        81
+      ],
+      "expected_rect": [
+        9,
+        2065,
+        454,
+        2146
+      ],
+      "dx_right_vs_ticket": 1,
+      "dy_bottom": 0,
+      "crop_file": "lite-verify-default-lite.png",
+      "quit": {
+        "quit_code": 0,
+        "window_gone": true,
+        "pids": {
+          "lite": [],
+          "std": []
+        }
+      }
+    },
+    "std": {
+      "rect": [
+        9,
+        2065,
+        455,
+        2146
+      ],
+      "size": [
+        446,
+        81
+      ],
+      "expected_rect": [
+        9,
+        2065,
+        454,
+        2146
+      ],
+      "dx_right_vs_ticket": 1,
+      "dy_bottom": 0,
+      "crop_file": "lite-verify-default-std.png",
+      "quit": {
+        "quit_code": 0,
+        "window_gone": true,
+        "pids": {
+          "lite": [],
+          "std": []
+        }
+      }
+    }
+  },
+  "modes": {
+    "taskbar-lite": {
+      "rect": [
+        9,
+        2065,
+        455,
+        2146
+      ],
+      "crop_file": "lite-verify-mode-taskbar-lite.png",
+      "quit": {
+        "quit_code": 0,
+        "window_gone": true,
+        "pids": {
+          "lite": [],
+          "std": []
+        }
+      }
+    },
+    "taskbar-std": {
+      "rect": [
+        9,
+        2065,
+        455,
+        2146
+      ],
+      "crop_file": "lite-verify-mode-taskbar-std.png",
+      "quit": {
+        "quit_code": 0,
+        "window_gone": true,
+        "pids": {
+          "lite": [],
+          "std": []
+        }
+      }
+    },
+    "desktop-lite": {
+      "rect": [
+        3010,
+        1971,
+        3456,
+        2052
+      ],
+      "crop_file": "lite-verify-mode-desktop-lite.png",
+      "quit": {
+        "quit_code": 0,
+        "window_gone": true,
+        "pids": {
+          "lite": [],
+          "std": []
+        }
+      }
+    },
+    "desktop-std": {
+      "rect": [
+        3010,
+        1971,
+        3456,
+        2052
+      ],
+      "crop_file": "lite-verify-mode-desktop-std.png",
+      "quit": {
+        "quit_code": 0,
+        "window_gone": true,
+        "pids": {
+          "lite": [],
+          "std": []
+        }
+      }
+    },
+    "free-lite": {
+      "rect": [
+        300,
+        400,
+        746,
+        481
+      ],
+      "crop_file": "lite-verify-mode-free-lite.png",
+      "quit": {
+        "quit_code": 0,
+        "window_gone": true,
+        "pids": {
+          "lite": [],
+          "std": []
+        }
+      }
+    },
+    "free-std": {
+      "rect": [
+        300,
+        400,
+        746,
+        481
+      ],
+      "crop_file": "lite-verify-mode-free-std.png",
+      "quit": {
+        "quit_code": 0,
+        "window_gone": true,
+        "pids": {
+          "lite": [],
+          "std": []
+        }
+      }
+    },
+    "taskbar-diff_lite_std": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "desktop-diff_lite_std": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "free-diff_lite_std": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "modes_checks": {
+    "screen": [
+      3456,
+      2160
+    ],
+    "taskbar": [
+      0,
+      2052,
+      3456,
+      2160
+    ],
+    "work": [
+      [
+        0,
+        0,
+        3456,
+        2160
+      ],
+      [
+        0,
+        0,
+        3456,
+        2052
+      ]
+    ],
+    "taskbar_tickets": {
+      "got": [
+        9,
+        2065,
+        455,
+        2146
+      ],
+      "expect_left_x": 9,
+      "expect_width": 446,
+      "expect_bottom_margin": 14
+    },
+    "desktop_right_aligned": {
+      "got": [
+        3010,
+        1971,
+        3456,
+        2052
+      ],
+      "expect_right": 3456,
+      "expect_bottom": 2052
+    },
+    "free_exact": {
+      "got": [
+        300,
+        400,
+        746,
+        481
+      ],
+      "expect": [
+        300,
+        400,
+        746,
+        481
+      ],
+      "expect_origin_from_config": true
+    }
+  },
+  "themes": {
+    "light-lite": {
+      "rect": [
+        3010,
+        1971,
+        3456,
+        2052
+      ],
+      "mode_color": [
+        243,
+        243,
+        243
+      ],
+      "mode_color_share": 0.9419,
+      "samples": {
+        "top_center": [
+          243,
+          243,
+          243
+        ],
+        "bottom_center": [
+          243,
+          243,
+          243
+        ],
+        "right_mid": [
+          243,
+          243,
+          243
+        ]
+      },
+      "expect_bg": [
+        243,
+        243,
+        243
+      ],
+      "bg_ok": true,
+      "crop_file": "lite-verify-theme-light-lite.png",
+      "bg_share_ge_60pct": true,
+      "quit": {
+        "quit_code": 0,
+        "window_gone": true,
+        "pids": {
+          "lite": [],
+          "std": []
+        }
+      }
+    },
+    "light-std": {
+      "rect": [
+        3010,
+        1971,
+        3456,
+        2052
+      ],
+      "mode_color": [
+        243,
+        243,
+        243
+      ],
+      "mode_color_share": 0.9419,
+      "samples": {
+        "top_center": [
+          243,
+          243,
+          243
+        ],
+        "bottom_center": [
+          243,
+          243,
+          243
+        ],
+        "right_mid": [
+          243,
+          243,
+          243
+        ]
+      },
+      "expect_bg": [
+        243,
+        243,
+        243
+      ],
+      "bg_ok": true,
+      "crop_file": "lite-verify-theme-light-std.png",
+      "bg_share_ge_60pct": true,
+      "quit": {
+        "quit_code": 0,
+        "window_gone": true,
+        "pids": {
+          "lite": [],
+          "std": []
+        }
+      }
+    },
+    "dark-lite": {
+      "rect": [
+        3010,
+        1971,
+        3456,
+        2052
+      ],
+      "mode_color": [
+        32,
+        32,
+        32
+      ],
+      "mode_color_share": 0.9419,
+      "samples": {
+        "top_center": [
+          32,
+          32,
+          32
+        ],
+        "bottom_center": [
+          32,
+          32,
+          32
+        ],
+        "right_mid": [
+          32,
+          32,
+          32
+        ]
+      },
+      "expect_bg": [
+        32,
+        32,
+        32
+      ],
+      "bg_ok": true,
+      "crop_file": "lite-verify-theme-dark-lite.png",
+      "bg_share_ge_60pct": true,
+      "quit": {
+        "quit_code": 0,
+        "window_gone": true,
+        "pids": {
+          "lite": [],
+          "std": []
+        }
+      }
+    },
+    "dark-std": {
+      "rect": [
+        3010,
+        1971,
+        3456,
+        2052
+      ],
+      "mode_color": [
+        32,
+        32,
+        32
+      ],
+      "mode_color_share": 0.9419,
+      "samples": {
+        "top_center": [
+          32,
+          32,
+          32
+        ],
+        "bottom_center": [
+          32,
+          32,
+          32
+        ],
+        "right_mid": [
+          32,
+          32,
+          32
+        ]
+      },
+      "expect_bg": [
+        32,
+        32,
+        32
+      ],
+      "bg_ok": true,
+      "crop_file": "lite-verify-theme-dark-std.png",
+      "bg_share_ge_60pct": true,
+      "quit": {
+        "quit_code": 0,
+        "window_gone": true,
+        "pids": {
+          "lite": [],
+          "std": []
+        }
+      }
+    }
+  },
+  "single_instance": {
+    "lite": {
+      "first_pid": 17052,
+      "second_exit_code": 0,
+      "second_wall_s": 0.012,
+      "one_window": true,
+      "pids_while_running": [
+        17052
+      ],
+      "window_still_visible": true,
+      "quit": {
+        "quit_code": 0,
+        "window_gone": true,
+        "pids": {
+          "lite": [],
+          "std": []
+        }
+      }
+    },
+    "std": {
+      "first_pid": 24196,
+      "second_exit_code": 0,
+      "second_wall_s": 0.015,
+      "one_window": true,
+      "pids_while_running": [
+        24196
+      ],
+      "window_still_visible": true,
+      "quit": {
+        "quit_code": 0,
+        "window_gone": true,
+        "pids": {
+          "lite": [],
+          "std": []
+        }
+      }
+    }
+  },
+  "quit": {
+    "lite": {
+      "pid": 28380,
+      "quit_code": 0,
+      "quit_wall_s": 0.018,
+      "window_gone": true,
+      "pid_alive_after": false,
+      "second_quit_code": 0,
+      "pids_after": {
+        "lite": [],
+        "std": []
+      }
+    },
+    "std": {
+      "pid": 15260,
+      "quit_code": 0,
+      "quit_wall_s": 0.013,
+      "window_gone": true,
+      "pid_alive_after": false,
+      "second_quit_code": 0,
+      "pids_after": {
+        "lite": [],
+        "std": []
+      }
+    }
+  },
+  "dump": {
+    "taskbar-lite": {
+      "exit_code": 0,
+      "wall_s": 1.028,
+      "keys": [
+        "cpu",
+        "disk",
+        "down",
+        "if_seen",
+        "mem",
+        "mode",
+        "up"
+      ],
+      "key_set_ok": true,
+      "mode_field": "taskbar",
+      "mode_ok": true,
+      "values": {
+        "cpu": "11",
+        "mem": "83",
+        "disk": "67",
+        "up": "11806",
+        "down": "92385",
+        "if_seen": "1",
+        "mode": "taskbar"
+      },
+      "raw": "cpu=11\nmem=83\ndisk=67\nup=11806\ndown=92385\nif_seen=1\nmode=taskbar\n"
+    },
+    "taskbar-std": {
+      "exit_code": 0,
+      "wall_s": 1.022,
+      "keys": [
+        "cfg_dir",
+        "cpu",
+        "disk",
+        "down",
+        "if_seen",
+        "mem",
+        "mode",
+        "theme",
+        "up"
+      ],
+      "key_set_ok": false,
+      "mode_field": "Taskbar",
+      "mode_ok": false,
+      "values": {
+        "cpu": "13",
+        "mem": "83",
+        "disk": "67",
+        "up": "22240",
+        "down": "407755",
+        "if_seen": "1",
+        "cfg_dir": "D:\\DSH\\sysmon-chip\\.appdata-test\\SysMonChip",
+        "mode": "Taskbar",
+        "theme": "Light"
+      },
+      "raw": "cpu=13\nmem=83\ndisk=67\nup=22240\ndown=407755\nif_seen=1\ncfg_dir=D:\\DSH\\sysmon-chip\\.appdata-test\\SysMonChip\nmode=Taskbar\ntheme=Light\n"
+    },
+    "free-lite": {
+      "exit_code": 0,
+      "wall_s": 1.019,
+      "keys": [
+        "cpu",
+        "disk",
+        "down",
+        "if_seen",
+        "mem",
+        "mode",
+        "up"
+      ],
+      "key_set_ok": true,
+      "mode_field": "free",
+      "mode_ok": true,
+      "values": {
+        "cpu": "12",
+        "mem": "82",
+        "disk": "67",
+        "up": "4571",
+        "down": "2673",
+        "if_seen": "1",
+        "mode": "free"
+      },
+      "raw": "cpu=12\nmem=82\ndisk=67\nup=4571\ndown=2673\nif_seen=1\nmode=free\n"
+    },
+    "free-std": {
+      "exit_code": 0,
+      "wall_s": 1.016,
+      "keys": [
+        "cfg_dir",
+        "cpu",
+        "disk",
+        "down",
+        "if_seen",
+        "mem",
+        "mode",
+        "theme",
+        "up"
+      ],
+      "key_set_ok": false,
+      "mode_field": "Free",
+      "mode_ok": false,
+      "values": {
+        "cpu": "14",
+        "mem": "82",
+        "disk": "67",
+        "up": "4691",
+        "down": "673",
+        "if_seen": "1",
+        "cfg_dir": "D:\\DSH\\sysmon-chip\\.appdata-test\\SysMonChip",
+        "mode": "Free",
+        "theme": "Light"
+      },
+      "raw": "cpu=14\nmem=82\ndisk=67\nup=4691\ndown=673\nif_seen=1\ncfg_dir=D:\\DSH\\sysmon-chip\\.appdata-test\\SysMonChip\nmode=Free\ntheme=Light\n"
+    }
+  },
+  "trace": {
+    "lite": {
+      "external_ms": 24.5,
+      "raw": "startup_ms=27\ndpi=216\nw=446\nh=81\n",
+      "fields": [
+        "dpi",
+        "h",
+        "startup_ms",
+        "w"
+      ],
+      "dpi": "216",
+      "w": "446",
+      "h": "81",
+      "dpi_ok": true,
+      "wh_ok": true
+    },
+    "std": {
+      "external_ms": 20.56,
+      "raw": "startup_ms=23.05\nexe_bytes=334848\ndpi=216\nw=446\nh=81\n",
+      "fields": [
+        "dpi",
+        "exe_bytes",
+        "h",
+        "startup_ms",
+        "w"
+      ],
+      "dpi": "216",
+      "w": "446",
+      "h": "81",
+      "dpi_ok": true,
+      "wh_ok": true
+    }
+  },
+  "demo": {
+    "lite": {
+      "alive_after_1.6s": true,
+      "window": [
+        3010,
+        1971,
+        3456,
+        2052
+      ],
+      "proc": {
+        "ws_mb": 5.6562,
+        "priv_mb": 1.7656,
+        "handles": 137,
+        "gdi": 13,
+        "user": 5
+      },
+      "crop_file": "lite-verify-demo-lite.png",
+      "quit": {
+        "quit_code": 0,
+        "window_gone": true,
+        "pids": {
+          "lite": [],
+          "std": []
+        }
+      }
+    },
+    "std": {
+      "alive_after_1.6s": true,
+      "window": [
+        3010,
+        1971,
+        3456,
+        2052
+      ],
+      "proc": {
+        "ws_mb": 5.6797,
+        "priv_mb": 1.7812,
+        "handles": 137,
+        "gdi": 13,
+        "user": 5
+      },
+      "crop_file": "lite-verify-demo-std.png",
+      "quit": {
+        "quit_code": 0,
+        "window_gone": true,
+        "pids": {
+          "lite": [],
+          "std": []
+        }
+      }
+    }
+  },
+  "selftest": {
+    "lite": {
+      "exit_code": 0,
+      "wall_s": 0.017,
+      "raw": "config_roundtrip=ok\nmode=free\nx=1234\ny=567\ntheme=dark\n",
+      "fields": {
+        "config_roundtrip": "ok",
+        "mode": "free",
+        "x": "1234",
+        "y": "567",
+        "theme": "dark"
+      },
+      "roundtrip_ok": true,
+      "mode": "free",
+      "x": "1234",
+      "y": "567",
+      "theme": "dark",
+      "config_after": {
+        "mode": "free",
+        "x": "1234",
+        "y": "567",
+        "interval": "2000",
+        "cpu": "0",
+        "mem": "1",
+        "disk": "1",
+        "net": "1",
+        "theme": "dark",
+        "locked": "1",
+        "hide_fs": "1",
+        "autostart": "0"
+      },
+      "config_matches": true,
+      "window_created": false
+    },
+    "lite_config_effective": {
+      "rect": [
+        1234,
+        567,
+        1680,
+        648
+      ],
+      "expect": [
+        1234,
+        567,
+        1680,
+        648
+      ],
+      "quit": {
+        "quit_code": 0,
+        "window_gone": true,
+        "pids": {
+          "lite": [],
+          "std": []
+        }
+      }
+    }
+  },
+  "persist": {
+    "lite": {
+      "config_written": {
+        "mode": "free",
+        "x": "300",
+        "y": "400",
+        "theme": "dark",
+        "interval": "2000"
+      },
+      "config_after_run": {
+        "mode": "free",
+        "x": "300",
+        "y": "400",
+        "interval": "2000",
+        "cpu": "1",
+        "mem": "1",
+        "disk": "1",
+        "net": "1",
+        "theme": "dark",
+        "locked": "0",
+        "hide_fs": "1",
+        "autostart": "0"
+      },
+      "rect_run1": [
+        300,
+        400,
+        746,
+        481
+      ],
+      "rect_run2": [
+        300,
+        400,
+        746,
+        481
+      ],
+      "rect_stable": true,
+      "expect_origin": [
+        300,
+        400
+      ],
+      "dark_bg_sample": [
+        32,
+        32,
+        32
+      ],
+      "theme_effective": true,
+      "quit": [
+        {
+          "quit_code": 0,
+          "window_gone": true,
+          "pids": {
+            "lite": [],
+            "std": []
+          }
+        },
+        {
+          "quit_code": 0,
+          "window_gone": true,
+          "pids": {
+            "lite": [],
+            "std": []
+          }
+        }
+      ]
+    },
+    "std": {
+      "config_written": {
+        "mode": "free",
+        "x": "300",
+        "y": "400",
+        "theme": "dark",
+        "interval": "2000"
+      },
+      "config_after_run": {
+        "mode": "free",
+        "x": "300",
+        "y": "400",
+        "interval": "2000",
+        "cpu": "1",
+        "mem": "1",
+        "disk": "1",
+        "net": "1",
+        "theme": "dark",
+        "locked": "0",
+        "hide_fs": "1",
+        "autostart": "0"
+      },
+      "rect_run1": [
+        300,
+        400,
+        746,
+        481
+      ],
+      "rect_run2": [
+        300,
+        400,
+        746,
+        481
+      ],
+      "rect_stable": true,
+      "expect_origin": [
+        300,
+        400
+      ],
+      "dark_bg_sample": [
+        32,
+        32,
+        32
+      ],
+      "theme_effective": true,
+      "quit": [
+        {
+          "quit_code": 0,
+          "window_gone": true,
+          "pids": {
+            "lite": [],
+            "std": []
+          }
+        },
+        {
+          "quit_code": 0,
+          "window_gone": true,
+          "pids": {
+            "lite": [],
+            "std": []
+          }
+        }
+      ]
+    }
+  },
+  "final": {
+    "clean": {
+      "clean": true,
+      "pids": {
+        "lite": [],
+        "std": []
+      }
+    },
+    "config_restored": {
+      "mode": "taskbar",
+      "x": "0",
+      "y": "0",
+      "interval": "1000",
+      "cpu": "1",
+      "mem": "1",
+      "disk": "1",
+      "net": "1",
+      "theme": "auto",
+      "locked": "0",
+      "hide_fs": "1",
+      "autostart": "0"
+    }
+  }
+}

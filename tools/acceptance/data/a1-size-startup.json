@@ -1,0 +1,165 @@
+{
+  "exe": {
+    "bytes": 333824,
+    "kb": 326.0,
+    "mb": 0.32,
+    "pe_magic": "0x20b",
+    "subsystem": 2,
+    "subsystem_name": "WINDOWS_GUI",
+    "sections": 10,
+    "timestamp": 1794310065,
+    "icons": 1,
+    "plan_ceiling_kb": 250,
+    "over_ceiling_kb": 76.0
+  },
+  "runs": [
+    {
+      "i": 1,
+      "external_ms_to_visible": 25.51,
+      "trace_startup_ms": 21.86,
+      "trace_dpi": "216",
+      "trace_wxh": [
+        "437",
+        "81"
+      ],
+      "eye_sample_ws_mb": 5.25,
+      "x_quit": 0
+    },
+    {
+      "i": 2,
+      "external_ms_to_visible": 51.18,
+      "trace_startup_ms": 47.79,
+      "trace_dpi": "216",
+      "trace_wxh": [
+        "437",
+        "81"
+      ],
+      "eye_sample_ws_mb": 5.29,
+      "x_quit": 0
+    },
+    {
+      "i": 3,
+      "external_ms_to_visible": 36.88,
+      "trace_startup_ms": 37.28,
+      "trace_dpi": "216",
+      "trace_wxh": [
+        "437",
+        "81"
+      ],
+      "eye_sample_ws_mb": 5.28,
+      "x_quit": 0
+    },
+    {
+      "i": 4,
+      "external_ms_to_visible": 39.02,
+      "trace_startup_ms": 34.37,
+      "trace_dpi": "216",
+      "trace_wxh": [
+        "437",
+        "81"
+      ],
+      "eye_sample_ws_mb": 5.27,
+      "x_quit": 0
+    },
+    {
+      "i": 5,
+      "external_ms_to_visible": 31.41,
+      "trace_startup_ms": 26.26,
+      "trace_dpi": "216",
+      "trace_wxh": [
+        "437",
+        "81"
+      ],
+      "eye_sample_ws_mb": 5.27,
+      "x_quit": 0
+    },
+    {
+      "i": 6,
+      "external_ms_to_visible": 30.65,
+      "trace_startup_ms": 26.46,
+      "trace_dpi": "216",
+      "trace_wxh": [
+        "437",
+        "81"
+      ],
+      "eye_sample_ws_mb": 5.27,
+      "x_quit": 0
+    },
+    {
+      "i": 7,
+      "external_ms_to_visible": 25.47,
+      "trace_startup_ms": 23.7,
+      "trace_dpi": "216",
+      "trace_wxh": [
+        "437",
+        "81"
+      ],
+      "eye_sample_ws_mb": 5.25,
+      "x_quit": 0
+    },
+    {
+      "i": 8,
+      "external_ms_to_visible": 26.34,
+      "trace_startup_ms": 21.1,
+      "trace_dpi": "216",
+      "trace_wxh": [
+        "437",
+        "81"
+      ],
+      "eye_sample_ws_mb": 5.27,
+      "x_quit": 0
+    },
+    {
+      "i": 9,
+      "external_ms_to_visible": 24.27,
+      "trace_startup_ms": 24.03,
+      "trace_dpi": "216",
+      "trace_wxh": [
+        "437",
+        "81"
+      ],
+      "eye_sample_ws_mb": 5.26,
+      "x_quit": 0
+    },
+    {
+      "i": 10,
+      "external_ms_to_visible": 30.76,
+      "trace_startup_ms": 28.86,
+      "trace_dpi": "216",
+      "trace_wxh": [
+        "437",
+        "81"
+      ],
+      "eye_sample_ws_mb": 5.27,
+      "x_quit": 0
+    }
+  ],
+  "trace_stats": {
+    "n": 10,
+    "min": 21.1,
+    "median": 26.46,
+    "avg": 29.17,
+    "max": 47.79
+  },
+  "external_stats": {
+    "n": 10,
+    "min": 24.27,
+    "median": 30.76,
+    "avg": 32.15,
+    "max": 51.18
+  },
+  "first_run": {
+    "i": 1,
+    "external_ms_to_visible": 25.51,
+    "trace_startup_ms": 21.86,
+    "trace_dpi": "216",
+    "trace_wxh": [
+      "437",
+      "81"
+    ],
+    "eye_sample_ws_mb": 5.25,
+    "x_quit": 0
+  },
+  "note": "首轮为文件缓存最冷；后续轮次受 NTFS/内存缓存影响，耗时偏低。",
+  "no_residual_process": true
+}
