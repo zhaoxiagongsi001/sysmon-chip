@@ -38,9 +38,18 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::{ReleaseCapture, SetCapture
 use crate::config::{self, Config, PosMode, Theme};
 use crate::metrics::{Metrics, Sampler};
 use crate::paint::{
-    scale, wide, Canvas, Fonts, Palette, Texts, BASE_H, BASE_W, COL_CPU, COL_DISK, COL_MEM,
-    COL_NET, RIGHT_EDGE, ROW1_H, ROW1_Y, ROW2_H, ROW2_Y,
+    scale, wide, Canvas, Fonts, Palette, Texts, BASE_H, ROW1_H, ROW1_Y, ROW2_H, ROW2_Y,
 };
+
+// std 版（`app/`）是早期固定布局：四列永远全显示、窗口宽度写死 236。
+// 这些常量 v1.0 从 chip_core 移到这里——lite 版（`app_ultra/`）改成按指标动态排版后，
+// 两个壳的宽度不再相等，共用常量只会互相绊脚。
+const BASE_W: i32 = 236;
+const COL_CPU: i32 = 10;
+const COL_MEM: i32 = 52;
+const COL_DISK: i32 = 94;
+const COL_NET: i32 = 140;
+const RIGHT_EDGE: i32 = 228;
 
 // ---- 消息 / 样式常量（用字面量，避免依赖 windows-sys 的常量命名） ----
 const WM_NULL: u32 = 0;
@@ -163,7 +172,7 @@ impl App {
             None => scale(BASE_H, self.dpi),
         };
         self.pal = self.effective_palette();
-        self.fonts = Some(Fonts::create(self.dpi));
+        self.fonts = Some(Fonts::create(self.dpi as i32));
         self.canvas = Canvas::new(self.w, self.h);
         self.brush = CreateSolidBrush(self.pal.bg) as HGDIOBJ;
         self.apply_corners();
@@ -615,7 +624,7 @@ impl App {
         if let Some(c) = &mut self.canvas {
             c.recreate(w, h);
         }
-        self.fonts = Some(Fonts::create(self.dpi));
+        self.fonts = Some(Fonts::create(self.dpi as i32));
         self.apply_corners();
         SetWindowPos(self.hwnd, hwnd_topmost(), 0, 0, w, h, SWP_NOMOVE | SWP_NOACTIVATE);
         self.apply_position();

@@ -4,7 +4,8 @@ use core::ptr;
 
 use windows_sys::Win32::Foundation::{CloseHandle, GetLastError, HANDLE, ERROR_ALREADY_EXISTS};
 use windows_sys::Win32::Storage::FileSystem::{
-    CreateDirectoryW, CreateFileW, GetTempPathW, ReadFile, WriteFile,
+    CreateDirectoryW, CreateFileW, DeleteFileW, GetTempPathW, MoveFileExW, ReadFile, WriteFile,
+    MOVEFILE_REPLACE_EXISTING,
 };
 use windows_sys::Win32::System::Environment::GetEnvironmentVariableW;
 use windows_sys::Win32::System::LibraryLoader::GetModuleFileNameW;
@@ -382,8 +383,23 @@ unsafe fn write_config(data: &[u8]) {
 }
 
 unsafe fn write_file(path: &[u16], data: &[u8]) -> bool {
+    // v1.0：先写同目录临时文件，写满再原子改名替换。
+    // 原来直接 CREATE_ALWAYS 覆盖，写到一半断电/崩溃会留下半截 config.ini。
+    let n = match path.iter().position(|&c| c == 0) {
+        Some(i) => i,
+        None => return false,
+    };
+    let mut tmp = [0u16; 320];
+    if n + 4 >= tmp.len() {
+        return false;
+    }
+    tmp[..n].copy_from_slice(&path[..n]);
+    for (i, c) in ".tmp".encode_utf16().enumerate() {
+        tmp[n + i] = c;
+    }
+
     let h = CreateFileW(
-        path.as_ptr(),
+        tmp.as_ptr(),
         GENERIC_WRITE,
         0,
         ptr::null(),
@@ -403,7 +419,15 @@ unsafe fn write_file(path: &[u16], data: &[u8]) -> bool {
         ptr::null_mut(),
     );
     CloseHandle(h);
-    ok != 0 && written as usize == data.len()
+    if ok == 0 || written as usize != data.len() {
+        DeleteFileW(tmp.as_ptr());
+        return false;
+    }
+    if MoveFileExW(tmp.as_ptr(), path.as_ptr(), MOVEFILE_REPLACE_EXISTING) == 0 {
+        DeleteFileW(tmp.as_ptr());
+        return false;
+    }
+    true
 }
 
 // ---------------------------------------------------------------- 注册表

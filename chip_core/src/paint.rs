@@ -10,20 +10,20 @@ use windows_sys::Win32::Graphics::Gdi::{
 
 use crate::metrics::Metrics;
 
-pub const BASE_W: i32 = 236;
+/// 面板高度（100% DPI）。宽度不再有全局常量：由 `layout()` 按开着的指标算，
+/// std 版 `app/` 自己维护固定宽度常量。
 pub const BASE_H: i32 = 48;
 
-/// 列起点（100% DPI）：CPU / MEM / DISK / 网速
-pub const COL_CPU: i32 = 10;
-pub const COL_MEM: i32 = 52;
-pub const COL_DISK: i32 = 94;
-pub const COL_NET: i32 = 140;
-pub const RIGHT_EDGE: i32 = 228;
-
-/// v0.9 布局：每个指标占的列宽（100% DPI），面板只给开着的指标分配位置。
-/// v0.9.1 整体收窄：网速列 88→71（实测 "1.9 MB/s" 在 225% 下 69.6 逻辑宽，
-/// 71 够用又不留空），三列百分比列 42/42/46→41/41/43，内边距 10→8。
-pub const ITEM_W: [i32; 4] = [41, 41, 43, 71];
+/// v1.0 布局：每个指标占的列宽（100% DPI），面板只给开着的指标分配位置。
+/// 三列百分比 41/41/43、内边距 8（v0.9.1 定稿）。
+/// 网速列 71→77：箭头在数字左侧，一行要同时放下「箭头 8 + 间隙 2 + 数字」；
+/// 225% 下 value 字体实测 "999 MB/s" 148 px、"1.9 MB/s" 137 px，列宽 77 逻辑
+/// (=173 px) 减箭头与间隙 23 px 后剩 150 px，最宽的 3 位 MB 读数正好放得下。
+pub const ITEM_W: [i32; 4] = [41, 41, 43, 77];
+/// 网速箭头占位宽（100% DPI）
+pub const NET_ARROW_W: i32 = 8;
+/// 网速箭头与数字之间的间隙（100% DPI）
+pub const NET_GAP: i32 = 2;
 /// v0.9 布局：面板左右内边距（左右必须相等，视觉上才对称）
 pub const PAD_L: i32 = 8;
 pub const PAD_R: i32 = 8;
@@ -50,6 +50,16 @@ pub fn layout(items: &crate::items::Items) -> Layout {
         }
     }
     Layout { on, x, width: cur + PAD_R }
+}
+
+/// 网速列内部排布：数字右缘贴列右缘，箭头紧贴数字左侧。
+///
+/// 返回 `(数字左缘 x, 箭头左缘 x)`。箭头会被夹在列左缘 `min_x` 处，
+/// 即使数字宽度超出预算也不会压到左边的磁盘列。
+pub fn net_group_x(right: i32, text_w: i32, arrow_w: i32, gap: i32, min_x: i32) -> (i32, i32) {
+    let text_x = right - text_w.max(0);
+    let arrow_x = (text_x - gap - arrow_w).max(min_x);
+    (text_x, arrow_x)
 }
 
 /// 两行文字的绘制矩形（相对面板顶端）
@@ -158,11 +168,20 @@ impl WText {
         }
     }
 
-    /// 字节/秒 -> "2.9 KB/s" / "512 B/s" / "1.2 MB/s"（整数运算，无浮点格式化）。
+    /// 字节/秒 -> "512 B/s" / "2.9 KB/s" / "1.2 MB/s" / "1.4 GB/s"（整数运算，无浮点格式化）。
     /// 数值 >=100 时去掉小数位，保证网速列宽度有上界、不撞左侧箭头。
     pub fn set_rate(&mut self, bps: u64) {
         self.clear();
-        if bps >= 1_048_576 {
+        if bps >= 1_073_741_824 {
+            // v1.0：>1 GiB/s 走 GB 档，否则 "1024.0 MB/s" 会把列撑爆
+            let tenths = (bps.saturating_mul(10) + 536_870_912) / 1_073_741_824;
+            self.push_num(tenths / 10);
+            if tenths < 1000 {
+                self.push(b'.' as u16);
+                self.push(b'0' as u16 + (tenths % 10) as u16);
+            }
+            self.tail(b" GB/s");
+        } else if bps >= 1_048_576 {
             let tenths = (bps.saturating_mul(10) + 524_288) / 1_048_576;
             self.push_num(tenths / 10);
             if tenths < 1000 {
@@ -184,10 +203,19 @@ impl WText {
         }
     }
 
-    /// 紧凑格式（放不下时用）：KB/MB 一律取整，例如 "37 KB/s" / "9 MB/s"
+    /// 紧凑格式（放不下时用）：KB/MB 一律取整，GB 保留一位小数，例如
+    /// "37 KB/s" / "9 MB/s" / "1.2 GB/s"。
     pub fn set_rate_compact(&mut self, bps: u64) {
         self.clear();
-        if bps >= 1_048_576 {
+        if bps >= 1_073_741_824 {
+            let tenths = (bps.saturating_mul(10) + 536_870_912) / 1_073_741_824;
+            self.push_num(tenths / 10);
+            if tenths < 100 {
+                self.push(b'.' as u16);
+                self.push(b'0' as u16 + (tenths % 10) as u16);
+            }
+            self.tail(b" GB/s");
+        } else if bps >= 1_048_576 {
             let mb = (bps + 524_288) / 1_048_576;
             self.push_num(mb);
             self.tail(b" MB/s");
@@ -646,6 +674,69 @@ mod tests {
         assert_eq!(s(&t), "↓");
     }
 }
+
+#[cfg(test)]
+mod v10_net {
+    use super::*;
+
+    fn s(t: &WText) -> String {
+        String::from_utf16_lossy(&t.units[..t.len.min(t.units.len())])
+    }
+
+    /// v1.0：>1 GiB/s 必须走 GB 档，否则 MB 段会变成 "1024.0 MB/s" 撑爆网速列。
+    #[test]
+    fn gb_tier_keeps_rate_text_bounded() {
+        let mut t = WText::new();
+        t.set_rate(2_147_483_648); // 2 GiB/s
+        assert_eq!(s(&t), "2.0 GB/s");
+        t.set_rate_compact(2_147_483_648);
+        assert_eq!(s(&t), "2.0 GB/s");
+        // 常规格式在 100 GB/s 以内都保留一位小数
+        t.set_rate(16_106_127_360);
+        assert_eq!(s(&t), "15.0 GB/s");
+        // 小于 1 GiB 仍走 MB，不带 GB
+        t.set_rate(536_870_912);
+        assert_eq!(s(&t), "512 MB/s");
+        // 任何格式都不该超过 10 个字符（列宽预算的前提）
+        for bps in [0u64, 999, 1024, 999_999, 1_048_576, 104_857_600, 999_999_999, 1_073_741_824, 10_737_418_240] {
+            t.set_rate(bps);
+            assert!(s(&t).len() <= 10, "{:?} 太长", s(&t));
+            t.set_rate_compact(bps);
+            assert!(s(&t).len() <= 10, "{:?} 太长", s(&t));
+        }
+    }
+
+    /// 数字右对齐、箭头贴数字左侧，并夹在列左缘之内。
+    #[test]
+    fn net_group_x_keeps_arrow_inside_column() {
+        // 列 [0,173)、数字 148 宽、箭头 18、间隙 5
+        assert_eq!(net_group_x(173, 148, 18, 5, 0), (25, 2));
+        // 数字过宽时箭头被夹到列左缘，不会压进左边的磁盘列
+        let (text_x, arrow_x) = net_group_x(173, 250, 18, 5, 0);
+        assert_eq!(text_x, -77);
+        assert_eq!(arrow_x, 0);
+        // 空文本不应把箭头推到列外
+        let (_, arrow_x) = net_group_x(173, 0, 18, 5, 0);
+        assert_eq!(arrow_x, 173 - 5 - 18);
+    }
+
+    /// 列宽预算：225% 下 value 字体最宽的紧凑读数（"999 MB/s" 148 px）加上
+    /// 箭头与间隙必须塞得进网速列。这只是常量自检，真机由 `tools/verify.py padding` 兜底。
+    #[test]
+    fn net_column_budget_covers_widest_compact_rate() {
+        const WIDEST_TEXT_PX_AT_225: i32 = 148; // 实测 GDI 值，改字体/字号要重测
+        let scale = |v: i32| (v * 216 + 48) / 96; // 与 app_impl::scale 同式
+        let avail = scale(ITEM_W[3]) - scale(NET_ARROW_W) - scale(NET_GAP);
+        assert!(
+            avail >= WIDEST_TEXT_PX_AT_225,
+            "网速列 {} 逻辑 px 只给文字留 {} px，小于最宽的 {} px",
+            ITEM_W[3],
+            avail,
+            WIDEST_TEXT_PX_AT_225
+        );
+    }
+}
+
 
 
 

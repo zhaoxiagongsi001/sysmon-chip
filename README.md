@@ -2,7 +2,7 @@
 
 复刻 MangoDisk「任务栏资源条」外观的 Windows 11 小挂件：两行文字实时显示 **CPU / 内存 / 系统盘 / 上下行网速**，单文件、免安装、不要管理员、不写驱动、不联网。
 
-- 发布物（推荐）：`发布/SysMonChipLite.exe`（**47.5 KB**，PE 版本 **0.9.1.0**，no_std 极限轻量版，功能与界面同 std 版逐像素一致）
+- 发布物（推荐）：`发布/SysMonChipLite.exe`（**48.5 KB**，PE 版本 **1.0.0.0**，no_std 极限轻量版，功能与界面同 std 版逐像素一致）
 - 发布物（std 版，保底）：`发布/SysMonChip.exe`（326.5 KB，v0.3.0.0）；两版共用同一份配置与单实例互斥，可随时互换对照
 - **v2.0 Lite（2026-11-10）**：抽出 no_std 共享核心 `chip_core`，外壳 `app_ultra` 不链接 Rust std（文件/注册表/命令行走 Win32）→ 体积 **327 KB → 56 KB（−83%）**，启动更快，功能/界面/稳定性与 std 版持平
 - **v1.1（2026-11-10）**：字号 +8%（标签 9.75 pt / 数值 10 pt）、面板 194→198 逻辑像素并重排列位、网速宽度自适应、桌面模式贴任务栏上沿+屏幕右缘、新增 `--demo`
@@ -364,3 +364,17 @@ PE 资源 0.5.0.0、Cargo.toml 2.0.2、README 2.0.0.0 三套并存 → 统一为
 - **整体收窄**：`ITEM_W` 42/42/46/88 → 41/41/43/71（88 是按最长 "999.9 MB/s" 排的，常规读数根本用不到），内边距 10 → 8。窗口宽 **236 → 212 逻辑像素（−10%）**；关闭项后的宽度同步变为 141 / 98。
 - **超长网速的兜底不变**：仍由 `on_timer` 里的 `measure_text` 判断，放不下就退成整数格式（`set_rate_compact`），不会和箭头重叠。
 - **版本**：`Cargo.toml` + `app.rc` + PE 资源统一 `0.9.1.0`；体积仍 48640 B。
+
+## v1.0 工程化收尾（2026-11-14）
+
+OCR 委派评审（`OCR审核-v0.9.1-20261114.md`）提出的 5 条发现与优化项全部落地，并顺带补掉两处同源隐患。
+
+- **网速列溢出（medium，已修）**：箭头在数字左侧，一行要同时放下「箭头 `NET_ARROW_W=8` + 间隙 `NET_GAP=2` + 数字」；原阈值只减了 9 逻辑 px，漏算间隙，`≥100 MB/s` 时箭头会压进磁盘列 11 px。现在预算由常量推导 `ITEM_W[3] − NET_ARROW_W − NET_GAP`，压缩后**重新测量**，并新增 `net_group_x()` 把箭头夹在列左缘兜底。列宽 71 → **77**：225% 下 value 字体实测 `999 MB/s` = 148 px、预算 150 px，正好放得下。
+- **新增 GB/s 档**：`set_rate` / `set_rate_compact` 在 `≥1 GiB/s` 时输出 `1.2 GB/s` / `15 GB/s`，否则 MB 段会变成 `1024.0 MB/s` 把列撑爆；任何格式都不超过 10 个字符（有单测锁住）。
+- **宽度不再每帧测量**：两行网速文字的像素宽在 `on_timer` 算好存进 `App::up_w` / `App::dn_w`，`render` 直接取用（原来每次重绘都要建 HDC 测量）。
+- **布局常量收敛**：`chip_core` 删掉 `BASE_W / COL_CPU / COL_MEM / COL_DISK / COL_NET / RIGHT_EDGE`；std 版（`app/`）把它们收进 `app/src/wnd.rs` 作为本地常量（该壳是固定 236 宽的老界面，v1.0 冻结在 0.3.0）。建窗宽度改用 `layout(&cfg.items).width`，启动瞬间不再多出 24 逻辑 px 再缩回。
+- **配置原子写**：`config.rs` 的 `write_file` 改为「同目录 `.tmp` → `MoveFileExW(MOVEFILE_REPLACE_EXISTING)` 替换」，写完校验字节数，失败删临时文件；原来 `CREATE_ALWAYS` 直覆盖，断电可能留半截 `config.ini`。
+- **探针脚本合并**：8 个一次性 `_v09_*.py` 与 `_traytest2.py` 合并成 `tools/verify.py`（`layout` / `padding` / `region` / `tray` / `shot` 五个子命令，退出码 0/1，DPI 用 `GetDpiForWindow` 实测不再写死 2.25），旧的 20 多个一次性脚本已删除。
+- **std 版重新可编译**：`app/src/wnd.rs:175`、`:627` 的 `Fonts::create(self.dpi)` 少了 `as i32`，导致 `cargo build` 在 `app/` 直接失败（v0.4 之后 chip_core 换了签名，此壳一直没人编）。已修。
+- **实测（v1.0，225%，物理像素）**：`python tools/verify.py` 全绿 —— 宽度全开 **491**（=218 逻辑）→ 关网速 317（141）→ 再关磁盘 221（98）；`desktop-right` 右缘锁 3456；左右留白 19 / 21（差 2 px）；`GetWindowRgn` 类型 3、`rgnBox=(0,0)-(491,107)`；托盘隐藏 5.2 ms / 恢复 5.6 ms。`cargo test` **13 项全绿**。体积 48640 → **49664 B（+1024 B）**，PE **1.0.0.0**。
+- **仍未做（下一版）**：亚克力（`app_impl.rs:152` 的 `GetProcAddress` UTF-16 同款错误，且启用前要先清底防鬼影）、`WM_NCHITTEST` 点击穿透、全屏进出即时化（目前 ≤1 s）、电池读数与 tooltip。

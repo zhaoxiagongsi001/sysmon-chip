@@ -42,7 +42,8 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::{ReleaseCapture, SetCapture
 use crate::config::{self, Config, PosMode, Theme};
 use chip_core::metrics::{Metrics, Sampler};
 use chip_core::paint::{
-    layout, rgb, scale, wide, Fonts, Palette, Texts, WText, BASE_H, BASE_W, CORNER_R, ITEM_W,
+    layout, net_group_x, rgb, scale, wide, Fonts, Palette, Texts, WText, BASE_H, CORNER_R, ITEM_W,
+    NET_ARROW_W, NET_GAP,
 };
 
 // ---- 消息 / 样式常量（用字面量，避免依赖 windows-sys 的常量命名） ----
@@ -231,6 +232,9 @@ pub struct App {
     evt_fg: *mut core::ffi::c_void,
     guard_ticks: u32,
     raises: u32,
+    /// 网速两行文字在当前 DPI 下的实测宽度（px）：每 tick 算一次，render 不再每帧量
+    up_w: i32,
+    dn_w: i32,
     trace: bool,
     demo: bool,
     t0: i64,
@@ -238,6 +242,8 @@ pub struct App {
 
 impl App {
     fn new(cfg: Config, trace: bool, demo: bool, t0: i64) -> Self {
+        // 建窗之前就要按当前指标算出宽度，否则会先按旧的固定宽闪一下再缩
+        let w0 = layout(&cfg.items).width;
         Self {
             hwnd: ptr::null_mut(),
             hinst: ptr::null_mut(),
@@ -251,7 +257,7 @@ impl App {
             acrylic: false,
             brush: ptr::null_mut(),
             dpi: 96,
-            w: BASE_W,
+            w: w0,
             h: BASE_H,
             tick: 0,
             drag: None,
@@ -266,6 +272,8 @@ impl App {
             evt_fg: ptr::null_mut(),
             guard_ticks: 0,
             raises: 0,
+            up_w: 0,
+            dn_w: 0,
             trace,
             demo,
             t0,
@@ -458,19 +466,20 @@ impl App {
         }
         if lay.on[3] {
             let nx = scale(lay.x[3], dpi);
-            let aw = scale(8, dpi);
-            let gap = scale(2, dpi);
+            let aw = scale(NET_ARROW_W, dpi);
+            let gap = scale(NET_GAP, dpi);
             // 列右缘 = 面板右缘 - PAD_R：箭头和数字作为一组右对齐，箭头永远紧贴
             // 数字，右侧留白恒等于左侧 PAD_L（不再随数值长短浮动）。
+            // 宽度是 on_timer 量好的；这里再用 net_group_x 夹一次，保证箭头不越界。
             let right = nx + scale(ITEM_W[3], dpi);
-            let up_w = measure_text(dst, f.label, &self.texts.up_speed);
-            let dn_w = measure_text(dst, f.value, &self.texts.down_speed);
-            let up_x = right - up_w.max(0);
-            let dn_x = right - dn_w.max(0);
-            draw_text(dst, &self.texts.up_speed, up_x, 0, up_w, row_h, false, self.pal.label, f.label);
-            draw_text(dst, &self.texts.up_arrow, up_x - gap - aw, 0, aw, row_h, false, self.pal.up, f.label);
-            draw_text(dst, &self.texts.down_speed, dn_x, row_h, dn_w, self.h - row_h, false, self.pal.label, f.value);
-            draw_text(dst, &self.texts.down_arrow, dn_x - gap - aw, row_h, aw, self.h - row_h, false, self.pal.down, f.value);
+            let (up_x, up_ax) = net_group_x(right, self.up_w, aw, gap, nx);
+            let (dn_x, dn_ax) = net_group_x(right, self.dn_w, aw, gap, nx);
+            let upw = right - up_x;
+            let dnw = right - dn_x;
+            draw_text(dst, &self.texts.up_speed, up_x, 0, upw, row_h, false, self.pal.label, f.label);
+            draw_text(dst, &self.texts.up_arrow, up_ax, 0, aw, row_h, false, self.pal.up, f.label);
+            draw_text(dst, &self.texts.down_speed, dn_x, row_h, dnw, self.h - row_h, false, self.pal.label, f.value);
+            draw_text(dst, &self.texts.down_arrow, dn_ax, row_h, aw, self.h - row_h, false, self.pal.down, f.value);
         }
     }
 
@@ -507,21 +516,32 @@ impl App {
         self.metrics = m;
         let mut t = self.texts;
         t.apply(&m, &self.cfg.items);
-        // 宽度自适应：网速右对齐放不下时退成整数格式，绝不和箭头重叠
+        // 网速列预算 = 列宽 − 箭头 − 间隙。v1.0 起由常量推导（原来只减 9 逻辑 px，
+        // 漏算了箭头左侧的间隙，≥100 MB/s 时箭头会压进磁盘列）。
+        // 超宽先退紧凑格式（MB 取整 / GB 一位小数），量完再存，render 不再每帧测量。
+        let mut up_w = self.up_w;
+        let mut dn_w = self.dn_w;
         if let Some(f) = &self.fonts {
-            let avail = scale(ITEM_W[3], self.dpi) - scale(9, self.dpi);
+            let avail = scale(ITEM_W[3] - NET_ARROW_W - NET_GAP, self.dpi);
             let hdc = GetDC(self.hwnd);
             if !hdc.is_null() {
-                if measure_text(hdc, f.label, &t.up_speed) > avail {
+                up_w = measure_text(hdc, f.label, &t.up_speed);
+                if up_w > avail {
                     t.up_speed.set_rate_compact(m.up);
+                    up_w = measure_text(hdc, f.label, &t.up_speed);
                 }
-                if measure_text(hdc, f.value, &t.down_speed) > avail {
+                dn_w = measure_text(hdc, f.value, &t.down_speed);
+                if dn_w > avail {
                     t.down_speed.set_rate_compact(m.down);
+                    dn_w = measure_text(hdc, f.value, &t.down_speed);
                 }
                 ReleaseDC(self.hwnd, hdc);
             }
         }
-        if t != self.texts {
+        let width_changed = up_w != self.up_w || dn_w != self.dn_w;
+        self.up_w = up_w;
+        self.dn_w = dn_w;
+        if t != self.texts || width_changed {
             self.texts = t;
             InvalidateRect(self.hwnd, ptr::null(), 0);
         }
@@ -1176,8 +1196,9 @@ unsafe fn create_window(app_ptr: *mut App) -> HWND {
     RegisterClassExW(&wc);
 
     let dpi = GetDpiForSystem();
-    let w = scale(BASE_W, if dpi == 0 { 96 } else { dpi });
     let h = scale(BASE_H, if dpi == 0 { 96 } else { dpi });
+    // v1.0：初始宽度跟菜单里实际生效的指标走（原来是固定 BASE_W，启动瞬间会多出 24 逻辑 px）
+    let w = scale((*app_ptr).w, if dpi == 0 { 96 } else { dpi });
     CreateWindowExW(
         WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
         class.as_ptr(),
