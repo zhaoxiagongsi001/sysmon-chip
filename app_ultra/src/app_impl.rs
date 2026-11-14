@@ -459,12 +459,18 @@ impl App {
         if lay.on[3] {
             let nx = scale(lay.x[3], dpi);
             let aw = scale(8, dpi);
-            let sx = nx + aw + scale(2, dpi);
-            let sw = scale(ITEM_W[3], dpi) - aw - scale(2, dpi);
-            draw_text(dst, &self.texts.up_arrow, nx, 0, aw, row_h, false, self.pal.up, f.label);
-            draw_text(dst, &self.texts.up_speed, sx, 0, sw, row_h, false, self.pal.label, f.label);
-            draw_text(dst, &self.texts.down_arrow, nx, row_h, aw, self.h - row_h, false, self.pal.down, f.value);
-            draw_text(dst, &self.texts.down_speed, sx, row_h, sw, self.h - row_h, false, self.pal.label, f.value);
+            let gap = scale(2, dpi);
+            // 列右缘 = 面板右缘 - PAD_R：箭头和数字作为一组右对齐，箭头永远紧贴
+            // 数字，右侧留白恒等于左侧 PAD_L（不再随数值长短浮动）。
+            let right = nx + scale(ITEM_W[3], dpi);
+            let up_w = measure_text(dst, f.label, &self.texts.up_speed);
+            let dn_w = measure_text(dst, f.value, &self.texts.down_speed);
+            let up_x = right - up_w.max(0);
+            let dn_x = right - dn_w.max(0);
+            draw_text(dst, &self.texts.up_speed, up_x, 0, up_w, row_h, false, self.pal.label, f.label);
+            draw_text(dst, &self.texts.up_arrow, up_x - gap - aw, 0, aw, row_h, false, self.pal.up, f.label);
+            draw_text(dst, &self.texts.down_speed, dn_x, row_h, dn_w, self.h - row_h, false, self.pal.label, f.value);
+            draw_text(dst, &self.texts.down_arrow, dn_x - gap - aw, row_h, aw, self.h - row_h, false, self.pal.down, f.value);
         }
     }
 

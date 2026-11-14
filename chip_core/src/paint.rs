@@ -20,10 +20,12 @@ pub const COL_DISK: i32 = 94;
 pub const COL_NET: i32 = 140;
 pub const RIGHT_EDGE: i32 = 228;
 
-/// v0.9 布局：每个指标占的列宽（100% DPI），面板只给开着的指标分配位置
-pub const ITEM_W: [i32; 4] = [42, 42, 46, 88];
-/// v0.9 布局：面板左右内边距
-pub const PAD_L: i32 = 10;
+/// v0.9 布局：每个指标占的列宽（100% DPI），面板只给开着的指标分配位置。
+/// v0.9.1 整体收窄：网速列 88→71（实测 "1.9 MB/s" 在 225% 下 69.6 逻辑宽，
+/// 71 够用又不留空），三列百分比列 42/42/46→41/41/43，内边距 10→8。
+pub const ITEM_W: [i32; 4] = [41, 41, 43, 71];
+/// v0.9 布局：面板左右内边距（左右必须相等，视觉上才对称）
+pub const PAD_L: i32 = 8;
 pub const PAD_R: i32 = 8;
 /// v0.9 圆角：外露竖边的圆角半径（100% DPI，逻辑像素）
 pub const CORNER_R: i32 = 6;
@@ -340,12 +342,27 @@ mod v09_layout {
     use super::*;
     use crate::items::Items;
 
-    /// 全开时布局必须与老的固定宽度一致（BASE_W / COL_* 是它的历史取值）。
+    /// 全开时的布局宽度 = 左右内边距 + 四列列宽（不再跟老的 BASE_W 绑死：
+    /// BASE_W 是 std 版固定窗口宽，v0.9.1 收窄网速列后两者已经不同）。
+    fn full_w() -> i32 {
+        PAD_L + ITEM_W.iter().sum::<i32>() + PAD_R
+    }
+
+    /// 全开时四列紧挨着排，起止位置由 PAD_L 与 ITEM_W 推出来（COL_* 是 std 版
+    /// 固定布局的遗留常量，v0.9.1 收窄后两者已不相等，不再互相校验）。
     #[test]
     fn all_items_match_legacy_layout() {
         let lay = layout(&Items::ALL);
-        assert_eq!(lay.width, BASE_W);
-        assert_eq!(lay.x, [COL_CPU, COL_MEM, COL_DISK, COL_NET]);
+        assert_eq!(lay.width, full_w());
+        assert_eq!(
+            lay.x,
+            [
+                PAD_L,
+                PAD_L + ITEM_W[0],
+                PAD_L + ITEM_W[0] + ITEM_W[1],
+                PAD_L + ITEM_W[0] + ITEM_W[1] + ITEM_W[2],
+            ]
+        );
         assert!(lay.on.iter().all(|v| *v));
     }
 
@@ -357,14 +374,14 @@ mod v09_layout {
         assert_eq!(lay.x[1], PAD_L);
         assert_eq!(lay.x[2], PAD_L + ITEM_W[1]);
         assert_eq!(lay.x[3], PAD_L + ITEM_W[1] + ITEM_W[2]);
-        assert_eq!(lay.width, BASE_W - ITEM_W[0]);
+        assert_eq!(lay.width, full_w() - ITEM_W[0]);
     }
 
     /// 关掉网速：宽度收缩最多，右边不留空白。
     #[test]
     fn disabling_net_drops_its_whole_column() {
         let lay = layout(&Items { cpu: true, mem: true, disk: true, net: false });
-        assert_eq!(lay.width, BASE_W - ITEM_W[3]);
+        assert_eq!(lay.width, full_w() - ITEM_W[3]);
         assert_eq!(lay.x[3], -1);
     }
 
