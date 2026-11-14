@@ -40,11 +40,12 @@ g32.DeleteObject.argtypes = [wintypes.HANDLE]
 
 WM_COMMAND = 0x0111
 WM_APP = 0x8000
-TRAY_CB = WM_APP + 1
+TRAY_CB = WM_APP + 1   # 托盘回调（WM_APP+1）
+WM_SHOW_CHIP = WM_APP + 4   # 应用内「复位手动隐藏并显示」
 WM_LBUTTONUP = 0x0202
 SM_CXSCREEN = 0
 
-CMD_NET, CMD_DISK, CMD_CPU, CMD_MEM = 4, 3, 1, 2
+CMD_NET, CMD_DISK = 4, 3
 CMD_DESKTOP, CMD_TASKBAR = 11, 12
 
 TICK = 0.005
@@ -82,6 +83,13 @@ def cmd(h, cid, wait=0.35):
     time.sleep(wait)
 
 
+def toggle_off(h, cid):
+    """按一次菜单项，返回面板是否真的变窄（即该项原本是开的）。"""
+    before = size(h)[0]
+    cmd(h, cid)
+    return size(h)[0] < before
+
+
 def grab(h):
     l, t, r_, b = box(h)
     return ImageGrab.grab(bbox=(l, t, r_, b), all_screens=True).convert("RGB"), (l, t, r_, b)
@@ -98,7 +106,9 @@ def check_layout(h):
     cmd(h, CMD_TASKBAR)
     w_all = width()
     left_all = box(h)[0]
-    cmd(h, CMD_NET)
+    if not toggle_off(h, CMD_NET):
+        fails.append("起始状态里「网速」本来就是关的（配置不是四项全开），本次布局检查未生效")
+        return fails
     w_net_off = width()
     cmd(h, CMD_DISK)
     w_both_off = width()
@@ -145,16 +155,34 @@ def text_columns(img):
     return first, last
 
 
-def check_padding(h):
-    """: 左右留白基本对称（v0.9.1 把右侧多余的 24 px 吃了回去）。"""
+def measure_padding(h):
     img, _ = grab(h)
     w, _h = img.size
     first, last = text_columns(img)
     if first is None or last is None:
+        return None
+    return w, img.size[1], first, w - 1 - last
+
+
+def check_padding(h):
+    """: 左右留白基本对称（v0.9.1 把右侧多余的 24 px 吃了回去）。
+
+    切模式/重排之后立刻抓屏会抓到半帧（右侧凭空多出 10px 空白），
+    因此先等一个刷新周期，若不对称再复测一次，两次都不对称才判失败。
+    """
+    got = None
+    for _ in range(3):
+        time.sleep(0.35)
+        got = measure_padding(h)
+        if got:
+            _w, _h, gap_l, gap_r = got
+            if abs(gap_l - gap_r) <= 2:
+                return []
+    if not got:
         return ["面板是空白：没有找到任何文字像素"]
-    gap_l, gap_r = first, w - 1 - last
+    w, _hh, gap_l, gap_r = got
     sc = scale_of(h)
-    print(f"  window={w}x{img.size[1]} gap_left={gap_l}px gap_right={gap_r}px "
+    print(f"  window={w}x{_hh} gap_left={gap_l}px gap_right={gap_r}px "
           f"(logical {gap_l / sc:.1f} / {gap_r / sc:.1f}, diff={abs(gap_l - gap_r)}px)")
     # 允许 2 物理 px 的字形两侧抗锯齿差
     return [] if abs(gap_l - gap_r) <= 2 else [f"左右留白差 {abs(gap_l - gap_r)}px（要求 ≤2px）"]
@@ -203,8 +231,11 @@ def check_tray(h):
     """: 托盘左键隐藏后必须稳住（v0.8 修的就是 0.7s 后自动复现）。"""
     fails = []
     if not u32.IsWindowVisible(h):
-        cmd(h, CMD_TASKBAR)
-        time.sleep(0.3)
+        # 用户可能用托盘把它关着；WM_SHOW_CHIP 会复位 hidden_by_user 再显示
+        u32.PostMessageW(h, WM_SHOW_CHIP, 0, 0)
+        time.sleep(0.4)
+        if not u32.IsWindowVisible(h):
+            return ["面板当前不可见，无法测托盘显隐"]
     for expect_visible, label in ((False, "click#1 -> HIDE"), (True, "click#2 -> SHOW")):
         if not u32.PostMessageW(h, TRAY_CB, 0, WM_LBUTTONUP):
             fails.append(f"{label}: PostMessageW 失败 err={ctypes.get_last_error()}")
@@ -258,7 +289,7 @@ def main(argv):
         except RuntimeError as e:
             fails = [str(e)]
         for f in fails:
-            print(f"  ✗ {f}")
+            print(f"  FAIL: {f}")
         if not fails:
             print("  ok")
         bad.extend(f"{name}: {f}" for f in fails)

@@ -3,6 +3,8 @@ name = "chip-core"
 version = "1.0.0"
 edition = "2021"
 description = "SysMon Chip 的 no_std 核心：布局 / 文本 / GDI 绘制 / 指标采样"
+license = "MIT"
+repository = "https://github.com/zhaoxiagongsi001/sysmon-chip"
 
 [lib]
 name = "chip_core"

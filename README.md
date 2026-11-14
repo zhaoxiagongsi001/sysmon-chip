@@ -310,7 +310,7 @@ cargo build --release                        # -> .rust/target/release/SysMonChi
 
 `on_tray` 只把 `visible=false`，下一秒 `update_visibility()` 判定「应该可见」又 `SW_SHOW` 回来。
 新增 `App.hidden_by_user` 状态，托盘左键翻转它，`update_visibility` 以它为第一优先级。
-实测（`tools/_traytest2.py`，PostMessage 模拟托盘左键）：隐藏 20 ms 内生效并**稳定保持 3 s**；再点一次同样稳定显示。
+实测（`tools/verify.py tray`，PostMessage 模拟托盘左键）：隐藏 20 ms 内生效并**稳定保持 3 s**；再点一次同样稳定显示。
 
 **3. 僵尸实例时双击启动器毫无反应（中）**
 
@@ -344,7 +344,7 @@ PE 资源 0.5.0.0、Cargo.toml 2.0.2、README 2.0.0.0 三套并存 → 统一为
 ### v0.8.1（2026-11-14，OCR 评审后补丁）
 
 - **启动器二次启动的唤出改走消息**：另一个实例被托盘隐藏时，双击启动器原来是直接 `ShowWindow`，窗口亮了但本实例仍以为自己隐藏（`hidden_by_user=true`）→ 之后点托盘第一下「显示」毫无变化。现改为 `PostMessage(WM_SHOW_CHIP)`，由窗口线程复位状态再显示。实测：隐藏 → 二次启动 → 可见；再点托盘左键**仍能立刻隐藏**（状态已同步）。
-- `tools/_traytest2.py` 修成真正的回归脚本：校验 `PostMessageW` 返回值、用 `==` 比较、失败时退出码 1。
+- 托盘回归脚本校验 `PostMessageW` 返回值、用 `==` 比较、失败时退出码 1（v1.0 起并入 `tools/verify.py tray`）。
 - 评审报告见 `OCR审核-v0.8-20261114.md`。
 
 ### v0.9（2026-11-14，宽度自适应 + 外露竖边圆角）
@@ -355,8 +355,8 @@ PE 资源 0.5.0.0、Cargo.toml 2.0.2、README 2.0.0.0 三套并存 → 统一为
 - **至少保留一项**：菜单里把最后一项也取消时直接忽略；`config.rs` 的 `load()` 另加兜底——配置被手改成四项全 0 时自动恢复 CPU，避免面板缩成空白条。
 - **`WM_COMMAND` 自动化通道**：wndproc 收 `WM_COMMAND`（`lParam == 0`）时按 `wParam & 0xFFFF` 调 `on_cmd`，脚本/测试可直接发消息切换指标，不必模拟鼠标（低完整性下 `SetForegroundWindow` 失败，真实菜单无法被外部驱动）。
 - **单测**：`chip_core` 新增 `v09_layout` 5 项（全开等于老常量、关 CPU 左移缩宽、关网速砍整列、单项保留内边距、关闭槽位为 -1），合计 **10 项全绿**。
-- **回归**：`tools/_traytest2.py` 仍 PASS（20.5 ms 隐藏、20.2 ms 恢复，各稳定 3 s）；体积 48640 B（+1024 B）。
-- 复现脚本：`tools/_v09.py`（宽度/对齐）、`tools/_v09_region.py`（区域与圆角 ASCII 采样）、`tools/_v09_modeshot.py`（两种放置的截图）。
+- **回归**：`tools/verify.py tray` 仍 PASS（20.5 ms 隐藏、20.2 ms 恢复，各稳定 3 s）；体积 48640 B（+1024 B）。
+- 复现脚本：`tools/verify.py layout`（宽度/对齐）、`region`（区域与圆角像素采样）、`shot`（截图）。
 
 ### v0.9.1（2026-11-14，左右留白对称 + 整体收窄）
 

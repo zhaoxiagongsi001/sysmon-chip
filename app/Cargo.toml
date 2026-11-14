@@ -3,6 +3,8 @@ name = "sysmon-chip"
 version = "0.3.0"
 edition = "2021"
 description = "Win11 极轻量资源条"
+license = "MIT"
+repository = "https://github.com/zhaoxiagongsi001/sysmon-chip"
 authors = ["DSH"]
 build = "build.rs"
 

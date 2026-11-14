@@ -3,6 +3,8 @@ name = "sysmon-chip-lite"
 version = "1.0.0"
 edition = "2021"
 description = "SysMon Chip Lite - no_std 极轻量资源条"
+license = "MIT"
+repository = "https://github.com/zhaoxiagongsi001/sysmon-chip"
 build = "build.rs"
 
 [[bin]]
